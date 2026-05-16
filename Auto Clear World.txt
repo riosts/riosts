@@ -1,0 +1,154 @@
+-- =========================================
+-- AUTO CLEAR WORLD
+-- MADE BY @GROWGAME_
+-- FOLLOW ON TIKTOK
+-- =========================================
+
+local client = getClient()
+
+local HIT_DELAY = 150
+local MOVE_DELAY = 80
+
+local SKIP = {
+    [110] = true,
+}
+
+-- =========================================
+
+local function log(txt)
+    getConsole():add(txt)
+end
+
+local function moveTo(x, y)
+
+    local target = Vector2i.new(x, y)
+
+    client:findPath(target)
+
+    while client:pathfinding() do
+        sleep(MOVE_DELAY)
+    end
+
+    local pos = client:point()
+
+    return pos.x == x and pos.y == y
+end
+
+local function breakTile(x, y)
+
+    local point = Vector2i.new(x, y)
+
+    while true do
+
+        local tile = client:world():tile(point)
+
+        if not tile then
+            break
+        end
+
+        local fg = tile.foreground or 0
+        local bg = tile.background or 0
+
+        -- skip id tertentu
+        if SKIP[fg] or SKIP[bg] then
+            break
+        end
+
+        -- tile kosong
+        if fg == 0 and bg == 0 then
+            break
+        end
+
+        client:hit(point)
+
+        sleep(HIT_DELAY)
+
+    end
+
+end
+
+-- =========================================
+-- DETECT BLOCK PALING ATAS + PALING KIRI
+-- =========================================
+
+local function getNextBlock()
+
+    local world = client:world()
+
+    if not world then
+        return nil
+    end
+
+    local width = world.size.x
+    local height = world.size.y
+
+    -- scan dari paling atas sampai Y 3
+    for y = height - 1, 3, -1 do
+
+        -- scan dari paling kiri
+        for x = 0, width - 1 do
+
+            local tile = world:tile(Vector2i.new(x, y))
+
+            if tile then
+
+                local fg = tile.foreground or 0
+                local bg = tile.background or 0
+
+                if not SKIP[fg] and not SKIP[bg] then
+
+                    if fg ~= 0 or bg ~= 0 then
+                        return x, y
+                    end
+
+                end
+
+            end
+
+        end
+
+    end
+
+    return nil
+end
+
+-- =========================================
+
+runThread(function()
+
+    sleep(1000)
+
+    log("START CLEAR")
+
+    while true do
+
+        local x, y = getNextBlock()
+
+        -- world kosong
+        if not x then
+            break
+        end
+
+        log("TARGET : "..x..","..y)
+
+        -- bot berdiri di atas block
+        local standX = x
+        local standY = y + 1
+
+        local reached = moveTo(standX, standY)
+
+        if reached then
+
+            sleep(100)
+
+            breakTile(x, y)
+
+        end
+
+        sleep(50)
+
+    end
+
+    log("WORLD CLEARED")
+
+end)

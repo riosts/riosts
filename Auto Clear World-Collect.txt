@@ -1,0 +1,218 @@
+local BlackList = { 110 }
+
+local CONFIG = {
+    HIT_DELAY = 550,
+    JITTER_MAX_MS = 150,
+    PATH_TIMEOUT = 10000,
+    PATH_STEP_DELAY = 550,
+}
+
+local client = getClient()
+
+function inBl(ids)
+    for _, i in pairs(BlackList) do
+        if ids == i then return false end
+    end
+    return true
+end
+
+local function ensureConnected()
+    if client:connected() then
+        return true
+    end
+
+    client:connect()
+
+    local t = 0
+    while not client:connected() and t < 15000 do
+        sleep(1000)
+        t = t + 1000
+    end
+
+    return client:connected()
+end
+
+local function pathTo(point)
+    if not ensureConnected() then
+        return false
+    end
+
+    local me = client:point()
+    if not me then
+        return false
+    end
+
+    if me:equals(point) then
+        return true
+    end
+
+    local ok = client:findPath(point)
+    if not ok then
+        return false
+    end
+
+    local t = 0
+    while client:pathfinding() and t < CONFIG.PATH_TIMEOUT do
+        local delay = CONFIG.PATH_STEP_DELAY + math.random(0, CONFIG.JITTER_MAX_MS)
+        sleep(delay)
+        t = t + delay
+
+        if not client:connected() then
+            return false
+        end
+    end
+
+    if client:pathfinding() then
+        client:clearPath()
+        return false
+    end
+
+    return true
+end
+
+local function getTile(point)
+    local w = client:world() or getWorld()
+    if not w then return nil end
+    return w:tile(point)
+end
+
+local function shouldBreak(tile)
+    if not tile then return false end
+    return inBl(tile.foreground) and inBl(tile.background)
+        and (tile.foreground ~= 0 or tile.background ~= 0)
+end
+
+local function callPoint(obj)
+    if not obj then return nil end
+    local ok, p = pcall(function() return obj:point() end)
+    return ok and p or nil
+end
+
+local function callId(obj)
+    if not obj then return nil end
+    local ok, v = pcall(function() return obj.id end)
+    if ok and v then return v end
+    ok, v = pcall(function() return obj:id() end)
+    return ok and v or nil
+end
+
+local function worldList(world, name)
+    if not world then return {} end
+    local ok, v = pcall(function() return world[name] end)
+    if ok and v then return v end
+    ok, v = pcall(function() return world[name](world) end)
+    return ok and v or {}
+end
+
+local function collectDrops()
+    local w = client:world() or getWorld()
+    if not w then return end
+
+    for _, drop in pairs(worldList(w, "collectables")) do
+        local id = callId(drop)
+        local point = callPoint(drop)
+        if id and point then
+            pathTo(point)
+            pcall(function() client:collect(id) end)
+            sleep(CONFIG.HIT_DELAY + math.random(0, CONFIG.JITTER_MAX_MS))
+        end
+    end
+end
+
+local function tryBreakFrom(stand, target)
+    if pathTo(stand) then
+        client:hit(target)
+        sleep(CONFIG.HIT_DELAY + math.random(0, CONFIG.JITTER_MAX_MS))
+        return true
+    end
+
+    return false
+end
+
+local function breakFromSide(target)
+    local stands = {
+        Vector2i.new(target.x - 1, target.y),
+        Vector2i.new(target.x + 1, target.y),
+    }
+
+    for _, stand in pairs(stands) do
+        if tryBreakFrom(stand, target) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function breakBlockingSide(target)
+    local blockers = {
+        Vector2i.new(target.x - 1, target.y),
+        Vector2i.new(target.x + 1, target.y),
+    }
+    local standAboveTarget = Vector2i.new(target.x, target.y + 1)
+
+    for _, blocker in pairs(blockers) do
+        local tile = getTile(blocker)
+        local failCount = 0
+
+        while shouldBreak(tile) do
+            if not tryBreakFrom(standAboveTarget, blocker) then
+                failCount = failCount + 1
+                if failCount >= 3 then
+                    break
+                end
+                sleep(300)
+            else
+                failCount = 0
+            end
+
+            tile = getTile(blocker)
+        end
+
+        if not shouldBreak(tile) and breakFromSide(target) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function main(BlackList)
+    if not ensureConnected() then
+        print("[clearworld] client not connected")
+        return
+    end
+
+    local prefs = client:preferences()
+    if prefs then
+        pcall(function() prefs.collect = true end)
+    end
+
+    for y = 58, 3, -1 do
+        for x = 0, 79 do
+            local target = Vector2i.new(x, y)
+            local tile = getTile(target)
+            local failCount = 0
+
+            while shouldBreak(tile) do
+                if not breakFromSide(target) and not breakBlockingSide(target) then
+                    failCount = failCount + 1
+                    if failCount >= 3 then
+                        break
+                    end
+                    sleep(300)
+                else
+                    failCount = 0
+                end
+
+                tile = getTile(target)
+            end
+
+            collectDrops()
+        end
+    end
+
+    collectDrops()
+end
+
+runThread(main, BlackList)
