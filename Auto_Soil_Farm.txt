@@ -8,12 +8,26 @@ local client = getClient()
 
 -- =========================================
 -- KONFIGURASI ID ITEM
--- Ganti SEED_ID dengan ID seed/block yang ingin di-farm.
--- ID ini dipakai sebagai SEED saat menanam (InventoryItemType.seed)
--- DAN sebagai BLOCK saat menghitung hasil panen (InventoryItemType.block).
--- Contoh ID umum: Soil = 4, Dirt = 102. Cek ID di inventaris kalau berbeda.
+-- Verifikasi resmi dari https://github.com/Frastio10/pixel-worlds-id (items.json):
+--   ID 1     = "SoilBlock"          (default - basic soil, satu-satunya "dirt"
+--                                     yang ada di items.json)
+--   ID 2735  = "GemSoil"             (varian penghasil gems, dipakai di
+--                                     rotation soil farm & gems soil farm.lua)
+--   ID 60    = "LunarSoil"
+--   ID 63    = "MartianSoil"
+--   ID 119   = "IllusorySoilBlock"
+--   ID 1130  = "LegendarySoilBlock"
+--   ID 2404  = "SoilBlockDark"
+--   ID 2405  = "SoilBlockGrey"
+--   ID 3006  = "AlienSoilBlock"
+-- CATATAN: di Pixel Worlds, satu item ID dipakai sebagai BLOCK maupun SEED;
+-- yang membedakan cuma InventoryItemType (block vs seed). Jadi BLOCK_ID dan
+-- SEED_ID hampir selalu bernilai sama -- isi sama supaya konsisten, kecuali
+-- memang ada use-case khusus.
+-- Tidak ada item bernama "DirtBlock" / "DirtSeed" / "SoilSeed" di items.json.
 -- =========================================
-local SEED_ID = 4
+local BLOCK_ID = 1   -- ID SoilBlock (verifikasi di items.json baris 7-8)
+local SEED_ID  = 1   -- sama dengan BLOCK_ID; ganti ke 2735 untuk farm GemSoil
 
 -- =========================================
 -- POSISI BERDIRI AMAN
@@ -62,6 +76,11 @@ local HIT_RANGE = 3
 -- Batas waktu menunggu satu seed siap dipanen (ms).
 -- Set 0 untuk langsung punch (mode block, tanpa nunggu tumbuh).
 local READY_TIMEOUT = 30000
+
+-- Fail-counter saat memukul: kalau foreground tile tidak berubah setelah
+-- MAX_FAIL_HITS kali pukulan berturut-turut, anggap tile non-breakable dan
+-- keluar dari harvestAt biar bot tidak nyangkut infinite loop.
+local MAX_FAIL_HITS = 5
 
 -- =========================================
 -- (Konstanta Zenith — jangan diubah)
@@ -178,11 +197,14 @@ local function harvestAt(x, y)
 
     -- 2) punch sampai tile kosong
     local target = Vector2i.new(x, y)
+    local lastFg = nil
+    local failCount = 0
     while true do
         if not isOnline() then return false end
 
         local t = getTile(x, y)
-        if not t or (t.foreground or 0) == 0 then return true end
+        local fg = t and (t.foreground or 0) or 0
+        if not t or fg == 0 then return true end
 
         -- kalau target di luar jarak pukul, balik dulu ke posisi berdiri
         local me = client:point()
@@ -192,6 +214,24 @@ local function harvestAt(x, y)
 
         client:hit(target)
         sleep(HIT_DELAY)
+
+        -- fail-counter: kalau fg tidak berubah setelah pukulan,
+        -- tile mungkin non-breakable. Setelah MAX_FAIL_HITS berturut-turut,
+        -- keluar supaya bot tidak nyangkut memukul terus.
+        local after = getTile(x, y)
+        local afterFg = after and (after.foreground or 0) or 0
+        if afterFg ~= 0 and afterFg == lastFg then
+            failCount = failCount + 1
+            if failCount >= MAX_FAIL_HITS then
+                log(string.format(
+                    "[soil] skip (%d,%d): non-breakable (fg=%d) setelah %d hit",
+                    x, y, afterFg, failCount))
+                return false
+            end
+        else
+            failCount = 0
+        end
+        lastFg = afterFg
     end
 end
 
@@ -214,7 +254,8 @@ end
 -- =========================================
 runThread(function()
     sleep(1000)
-    log("[AUTO SOIL FARM] start (SEED_ID="..SEED_ID..")")
+    log(string.format("[AUTO SOIL FARM] start (BLOCK_ID=%d, SEED_ID=%d)",
+        BLOCK_ID, SEED_ID))
 
     -- aktifkan auto-collect bawaan client (kalau didukung)
     local prefs = client:preferences()
