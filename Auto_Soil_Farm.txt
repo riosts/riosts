@@ -1,0 +1,291 @@
+-- =========================================
+-- AUTO SOIL FARM
+-- Looping: tanam seed -> tunggu/punch sampai hancur -> collect drop
+-- Untuk Zenith client (Pixel Worlds)
+-- =========================================
+
+local client = getClient()
+
+-- =========================================
+-- KONFIGURASI ID ITEM
+-- Verifikasi resmi dari https://github.com/Frastio10/pixel-worlds-id (items.json):
+--   ID 1     = "SoilBlock"          (default - basic soil, satu-satunya "dirt"
+--                                     yang ada di items.json)
+--   ID 2735  = "GemSoil"             (varian penghasil gems, dipakai di
+--                                     rotation soil farm & gems soil farm.lua)
+--   ID 60    = "LunarSoil"
+--   ID 63    = "MartianSoil"
+--   ID 119   = "IllusorySoilBlock"
+--   ID 1130  = "LegendarySoilBlock"
+--   ID 2404  = "SoilBlockDark"
+--   ID 2405  = "SoilBlockGrey"
+--   ID 3006  = "AlienSoilBlock"
+-- CATATAN: di Pixel Worlds, satu item ID dipakai sebagai BLOCK maupun SEED;
+-- yang membedakan cuma InventoryItemType (block vs seed). Jadi BLOCK_ID dan
+-- SEED_ID hampir selalu bernilai sama -- isi sama supaya konsisten, kecuali
+-- memang ada use-case khusus.
+-- Tidak ada item bernama "DirtBlock" / "DirtSeed" / "SoilSeed" di items.json.
+-- =========================================
+local BLOCK_ID = 1   -- ID SoilBlock (verifikasi di items.json baris 7-8)
+local SEED_ID  = 1   -- sama dengan BLOCK_ID; ganti ke 2735 untuk farm GemSoil
+
+-- =========================================
+-- POSISI BERDIRI AMAN
+-- Biarkan nil -> otomatis ambil posisi karakter saat skrip pertama jalan.
+-- Isi angka kalau mau memaksa karakter berdiri di koordinat tertentu.
+-- =========================================
+local STAND_X = nil
+local STAND_Y = nil
+
+-- =========================================
+-- TILE TANAM
+-- Daftar offset relatif ke posisi berdiri (STAND_X, STAND_Y).
+-- Tile target = (STAND_X + dx, STAND_Y + dy).
+-- Pastikan tile target kosong dan tile di (x, y+1) solid agar seed bisa tumbuh.
+-- Tambah / kurangi entri sesuai lebar farm-mu.
+-- =========================================
+local PLANT_OFFSETS = {
+    { dx = -1, dy = 0 },   -- 1 tile di kiri karakter (sebaris)
+    { dx =  1, dy = 0 },   -- 1 tile di kanan karakter (sebaris)
+    -- contoh tambahan:
+    -- { dx = -2, dy = 0 },
+    -- { dx =  2, dy = 0 },
+    -- { dx =  0, dy = -1 }, -- 1 tile di atas karakter
+}
+
+-- =========================================
+-- DELAY (ms)
+-- Naikkan kalau sering lag / DC, turunkan kalau mau lebih cepat.
+-- =========================================
+local PLACE_DELAY      = 250    -- jeda setelah menaruh tiap seed
+local HIT_DELAY        = 220    -- jeda antar pukulan (punch)
+local COLLECT_DELAY    = 120    -- jeda antar collect drop
+local GROW_CHECK_DELAY = 300    -- jeda saat polling apakah tree sudah siap
+local LOOP_DELAY       = 500    -- jeda antar putaran besar
+local PATH_STEP_DELAY  = 50     -- jeda saat pathfinding
+local PATH_TIMEOUT     = 8000   -- batas waktu pathfinding (ms)
+
+-- =========================================
+-- JARAK MEMUKUL
+-- Jarak maksimum (block) target ke karakter saat memukul.
+-- Kalau jarak target lebih jauh dari nilai ini, karakter di-pathing ulang
+-- balik ke STAND_X / STAND_Y dulu sebelum lanjut memukul.
+-- =========================================
+local HIT_RANGE = 3
+
+-- Batas waktu menunggu satu seed siap dipanen (ms).
+-- Set 0 untuk langsung punch (mode block, tanpa nunggu tumbuh).
+local READY_TIMEOUT = 30000
+
+-- Fail-counter saat memukul: kalau foreground tile tidak berubah setelah
+-- MAX_FAIL_HITS kali pukulan berturut-turut, anggap tile non-breakable dan
+-- keluar dari harvestAt biar bot tidak nyangkut infinite loop.
+local MAX_FAIL_HITS = 5
+
+-- =========================================
+-- (Konstanta Zenith — jangan diubah)
+-- =========================================
+local InventoryItemType = {
+    block = 0, background = 1, seed = 2, water = 3,
+    wearable = 4, weapon = 5, throwable = 6, consumable = 7,
+    shard = 8, blueprint = 9, familiar = 10, food = 11, wiring = 12,
+}
+
+-- =========================================
+-- UTIL
+-- =========================================
+local function log(msg)
+    getConsole():add(msg)
+end
+
+local function isOnline()
+    return client:connected() and client:ping() > 0
+end
+
+local function getCount(id, t)
+    return client:inventory():count(id, t or InventoryItemType.block)
+end
+
+local function getTile(x, y)
+    local world = client:world()
+    if not world then return nil end
+    return world:tile(Vector2i.new(x, y))
+end
+
+local function moveTo(x, y)
+    local me = client:point()
+    if me and me.x == x and me.y == y then
+        return true
+    end
+
+    client:findPath(Vector2i.new(x, y))
+
+    local t = 0
+    while client:pathfinding() and t < PATH_TIMEOUT do
+        sleep(PATH_STEP_DELAY)
+        t = t + PATH_STEP_DELAY
+        if not isOnline() then return false end
+    end
+
+    if client:pathfinding() then
+        client:clearPath()
+        return false
+    end
+
+    return true
+end
+
+-- pastikan karakter di posisi berdiri; auto-set STAND_* dari posisi sekarang
+local function ensureStanding()
+    if STAND_X == nil or STAND_Y == nil then
+        local p = client:point()
+        if not p then return false end
+        STAND_X, STAND_Y = p.x, p.y
+        log(string.format("[soil] posisi berdiri: (%d,%d)", STAND_X, STAND_Y))
+        return true
+    end
+    return moveTo(STAND_X, STAND_Y)
+end
+
+-- =========================================
+-- PLANT
+-- Menanam seed di tile (x, y) jika tile kosong dan ada block solid di (x, y+1).
+-- =========================================
+local function plantAt(x, y)
+    if getCount(SEED_ID, InventoryItemType.seed) <= 0 then
+        return false
+    end
+
+    local tile = getTile(x, y)
+    if not tile then return false end
+
+    -- skip kalau tile sudah terisi (mungkin masih ada tree dari putaran sebelumnya)
+    if (tile.foreground or 0) ~= 0 then return true end
+
+    -- harus ada block solid di (x, y+1) supaya seed bisa tumbuh
+    local below = getTile(x, y + 1)
+    if not below or (below.foreground or 0) == 0 then return false end
+
+    client:place(Vector2i.new(x, y), SEED_ID, InventoryItemType.seed)
+    sleep(PLACE_DELAY)
+    return true
+end
+
+-- =========================================
+-- HARVEST / BREAK
+-- 1. Kalau tile-nya tree, tunggu tree:ready() (maks READY_TIMEOUT ms).
+-- 2. Punch tile sampai foreground == 0.
+-- =========================================
+local function harvestAt(x, y)
+    -- 1) tunggu sampai siap dipanen (kalau memang tree)
+    local tile = getTile(x, y)
+    if tile and (tile.foreground or 0) ~= 0 then
+        local tree = tile:tree()
+        if tree ~= nil and READY_TIMEOUT > 0 then
+            local waited = 0
+            while waited < READY_TIMEOUT do
+                if not isOnline() then return false end
+                tile = getTile(x, y)
+                if not tile or (tile.foreground or 0) == 0 then return false end
+                tree = tile:tree()
+                if tree and tree:ready() then break end
+                sleep(GROW_CHECK_DELAY)
+                waited = waited + GROW_CHECK_DELAY
+            end
+        end
+    end
+
+    -- 2) punch sampai tile kosong
+    local target = Vector2i.new(x, y)
+    local lastFg = nil
+    local failCount = 0
+    while true do
+        if not isOnline() then return false end
+
+        local t = getTile(x, y)
+        local fg = t and (t.foreground or 0) or 0
+        if not t or fg == 0 then return true end
+
+        -- kalau target di luar jarak pukul, balik dulu ke posisi berdiri
+        local me = client:point()
+        if me and (math.abs(me.x - x) > HIT_RANGE or math.abs(me.y - y) > HIT_RANGE) then
+            ensureStanding()
+        end
+
+        client:hit(target)
+        sleep(HIT_DELAY)
+
+        -- fail-counter: kalau fg tidak berubah setelah pukulan,
+        -- tile mungkin non-breakable. Setelah MAX_FAIL_HITS berturut-turut,
+        -- keluar supaya bot tidak nyangkut memukul terus.
+        local after = getTile(x, y)
+        local afterFg = after and (after.foreground or 0) or 0
+        if afterFg ~= 0 and afterFg == lastFg then
+            failCount = failCount + 1
+            if failCount >= MAX_FAIL_HITS then
+                log(string.format(
+                    "[soil] skip (%d,%d): non-breakable (fg=%d) setelah %d hit",
+                    x, y, afterFg, failCount))
+                return false
+            end
+        else
+            failCount = 0
+        end
+        lastFg = afterFg
+    end
+end
+
+-- =========================================
+-- COLLECT (seed + gems)
+-- Ambil semua drop yang ada di world.
+-- =========================================
+local function collectDrops()
+    local world = client:world()
+    if not world or not world.collectables then return end
+
+    for id, _ in pairs(world.collectables) do
+        pcall(function() client:collect(id) end)
+        sleep(COLLECT_DELAY)
+    end
+end
+
+-- =========================================
+-- MAIN LOOP
+-- =========================================
+runThread(function()
+    sleep(1000)
+    log(string.format("[AUTO SOIL FARM] start (BLOCK_ID=%d, SEED_ID=%d)",
+        BLOCK_ID, SEED_ID))
+
+    -- aktifkan auto-collect bawaan client (kalau didukung)
+    local prefs = client:preferences()
+    if prefs then
+        pcall(function() prefs.collect = true end)
+    end
+
+    while true do
+        if not isOnline() then
+            sleep(1000)
+        else
+            -- 1) berdiri di posisi aman
+            ensureStanding()
+
+            -- 2) tanam seed di tiap offset
+            for _, off in ipairs(PLANT_OFFSETS) do
+                ensureStanding()
+                plantAt(STAND_X + off.dx, STAND_Y + off.dy)
+            end
+
+            -- 3) tunggu siap, lalu punch sampai hancur
+            for _, off in ipairs(PLANT_OFFSETS) do
+                harvestAt(STAND_X + off.dx, STAND_Y + off.dy)
+            end
+
+            -- 4) ambil drop seed + gems
+            collectDrops()
+
+            -- 5) jeda lalu ulangi
+            sleep(LOOP_DELAY)
+        end
+    end
+end)
