@@ -40,11 +40,30 @@ USER_CONFIG = {
     -- SAVE_MODE:
     --   "auto"  = drop hasil buy di world farm.
     --   "world" = drop hasil buy di world lain, lalu balik ke farm.
+    --
+    -- AUTOBUY_PACK_ID dapat berupa:
+    --   1) String tunggal               -> "FishingRecyler"
+    --   2) Tabel kandidat ID            -> { "LureBooster", "LurePack", "Lure" }
+    --      Script akan otomatis test tiap kandidat via getPack()
+    --      dan pakai ID pertama yang valid. Berguna kalau nama
+    --      pack di game belum pasti.
+    --
+    -- DAFTAR PACK ID YANG SUDAH DIKETAHUI:
+    --   "FishingRecyler"                              -> Fishing Recycler (20000 gems)
+    --   { "LureBooster", "LurePack", "Lure" }         -> Lure Pack (100 gems, 3 lures random)
+    --
+    -- TIPS LURE PACK:
+    --   AUTOBUY_PACK_ID   = { "LureBooster", "LurePack", "Lure" },
+    --   AUTOBUY_PACK_COST = 100,
+    --   AUTO_TRASH        = false,  -- supaya lure hasil buy tidak ke-trash
     -- =====================================================
     AUTOBUY_ENABLED = true,
     AUTOBUY_CHECK_EVERY_CYCLE = true,
     AUTOBUY_PACK_ID = "FishingRecyler",
     AUTOBUY_PACK_COST = 20000,
+    -- Contoh konfigurasi Lure Pack (uncomment & comment baris di atas):
+    -- AUTOBUY_PACK_ID = { "LureBooster", "LurePack", "Lure" },
+    -- AUTOBUY_PACK_COST = 100,
     AUTOBUY_BUY_DELAY = 700,
     AUTOBUY_MAX_FAIL = 20,
     AUTOBUY_SAVE_MODE = "auto",
@@ -1271,14 +1290,57 @@ function ensure_at_tile(target_x, target_y, tolerance, max_retry)
 end
 
 PACK_DROPS_CACHE = nil
+RESOLVED_PACK_ID = nil
+
+-- Resolve PACK_ID yang valid dari CONFIG.autobuy.pack_id.
+-- Mendukung dua format:
+--   * string  -> dipakai langsung (backward compatible).
+--   * tabel   -> tiap kandidat dicek pakai getPack(); ID pertama
+--                yang mengembalikan pack valid (punya drops) akan dipakai.
+-- Hasil di-cache di RESOLVED_PACK_ID sehingga resolusi hanya jalan sekali.
+function resolve_pack_id()
+    if RESOLVED_PACK_ID ~= nil then return RESOLVED_PACK_ID end
+
+    local cfg = CONFIG.autobuy.pack_id
+
+    if type(cfg) == "string" then
+        RESOLVED_PACK_ID = cfg
+        print("[AUTOBUY] PACK_ID = " .. tostring(RESOLVED_PACK_ID))
+        return RESOLVED_PACK_ID
+    end
+
+    if type(cfg) == "table" then
+        for _, candidate in ipairs(cfg) do
+            local ok, pack = pcall(function() return getPack(candidate) end)
+            if ok and pack and pack.drops then
+                RESOLVED_PACK_ID = candidate
+                print("[AUTOBUY] PACK_ID kandidat valid: " .. tostring(candidate))
+                return RESOLVED_PACK_ID
+            else
+                print("[AUTOBUY] PACK_ID kandidat tidak valid: " .. tostring(candidate))
+            end
+        end
+        -- Tidak ada kandidat valid; fallback ke kandidat pertama supaya
+        -- packet buy tetap terkirim (server mungkin masih bisa terima).
+        RESOLVED_PACK_ID = cfg[1]
+        print("[AUTOBUY] Tidak ada kandidat valid, fallback ke: " .. tostring(RESOLVED_PACK_ID))
+        return RESOLVED_PACK_ID
+    end
+
+    print("[AUTOBUY] AUTOBUY_PACK_ID format tidak dikenali (harus string atau tabel)")
+    return nil
+end
 
 function is_pack_drop(id)
     if not PACK_DROPS_CACHE then
         PACK_DROPS_CACHE = {}
-        local pack = getPack(CONFIG.autobuy.pack_id)
-        if pack and pack.drops then
-            for _, drop in pairs(pack.drops) do
-                PACK_DROPS_CACHE[drop.id] = true
+        local pid = resolve_pack_id()
+        if pid then
+            local ok, pack = pcall(function() return getPack(pid) end)
+            if ok and pack and pack.drops then
+                for _, drop in pairs(pack.drops) do
+                    PACK_DROPS_CACHE[drop.id] = true
+                end
             end
         end
     end
@@ -1310,10 +1372,18 @@ function autobuy_routine()
     local gems = get_gems()
     if gems < CONFIG.autobuy.pack_cost then return end
 
-    print("[AUTOBUY] === Mulai autobuy (gems=" .. gems .. ") ===")
+    local pid = resolve_pack_id()
+    if not pid then
+        print("[AUTOBUY] PACK_ID tidak valid, autobuy dibatalkan")
+        send_webhook("Auto Buy Error", "PACK_ID tidak valid", CONFIG.webhook.colors.error)
+        return
+    end
+
+    print("[AUTOBUY] === Mulai autobuy (gems=" .. gems .. ", pack=" .. tostring(pid) .. ") ===")
     send_webhook(
         "Auto Buy Mulai",
-        "Gems = " .. gems .. " >= " .. CONFIG.autobuy.pack_cost .. "\nMulai warp ke " .. CONFIG.autobuy.buy_world,
+        "Pack = " .. tostring(pid) .. "\nGems = " .. gems .. " >= " .. CONFIG.autobuy.pack_cost ..
+            "\nMulai warp ke " .. CONFIG.autobuy.buy_world,
         CONFIG.webhook.colors.success
     )
 
@@ -1338,7 +1408,7 @@ function autobuy_routine()
         local before_gems = cur_gems
         pcall(function()
             client:send("gnNm", {
-                mXFc = CONFIG.autobuy.pack_id,
+                mXFc = pid,
                 MiiN = {}
             })
         end)
