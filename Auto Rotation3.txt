@@ -1,0 +1,1568 @@
+-- =========================================================
+-- PENGATURAN MUDAH
+-- Ubah bagian ini saja kalau belum paham coding.
+-- Angka koordinat formatnya: x = kiri/kanan, y = atas/bawah.
+-- =========================================================
+USER_CONFIG = {
+    -- =====================================================
+    -- 1) FARM UTAMA
+    -- =====================================================
+    WORLD_NAME = "NS921532IOASJ01",       -- Nama world farm.
+    ITEM_ID = 2735,             -- ID block/seed yang mau difarm.
+    HIT_TO_BREAK = 4,           -- Jumlah hit untuk menghancurkan 1 block.
+    FARM_MODE = "one_row",     -- Pilihan: "one_row" atau "full".
+
+    -- =====================================================
+    -- 2) POSISI PNB DAN AREA ONE ROW
+    -- =====================================================
+    PNB_X = 33,
+    PNB_Y = 29,
+    ONE_ROW_Y = 27,
+    FARM_START_X = 1,
+    FARM_END_X = 38,
+
+    -- =====================================================
+    -- 3) DROP SEED OTOMATIS
+    -- Wajib isi SAVE_WORLD. Seed selalu di-drop ke world ini,
+    -- lalu bot balik ke world farm.
+    -- =====================================================
+    DROP_SEED_ENABLED = true,
+    DROP_SEED_X = 38,
+    DROP_SEED_Y = 33,
+    DROP_SEED_SAVE_WORLD = "NS921532IOASJ01",
+    DROP_SEED_SAVE_X = 38,
+    DROP_SEED_SAVE_Y = 33,
+    DROP_SEED_IF_SEED_AT_LEAST = 200,
+    DROP_SEED_AMOUNT = 190,
+
+    -- =====================================================
+    -- 4) AUTOBUY
+    -- SAVE_MODE:
+    --   "auto"  = drop hasil buy di world farm.
+    --   "world" = drop hasil buy di world lain, lalu balik ke farm.
+    -- =====================================================
+    AUTOBUY_ENABLED = true,
+    AUTOBUY_CHECK_EVERY_CYCLE = true,
+    AUTOBUY_PACK_ID = "FishingRecyler",
+    AUTOBUY_PACK_COST = 20000,
+    AUTOBUY_BUY_DELAY = 700,
+    AUTOBUY_MAX_FAIL = 20,
+    AUTOBUY_SAVE_MODE = "auto",
+    AUTOBUY_DROP_X = 42,
+    AUTOBUY_DROP_Y = 33,
+    AUTOBUY_SAVE_WORLD = "NS921532IOASJ01",
+    AUTOBUY_SAVE_DROP_Y = 33,
+    AUTOBUY_SAVE_DROP_X_MIN = 41,
+    AUTOBUY_SAVE_DROP_X_MAX = 43,
+    AUTOBUY_DROP_DELAY = 1000,
+
+    -- =====================================================
+    -- 5) SAFETY HARVEST
+    -- =====================================================
+    HARVEST_MAX_PATHFIND_DIST = 25,
+    HARVEST_MAX_PATHFIND_TIMEOUT = 6000,
+    HARVEST_RECOVERY_POSITION = true,
+    HARVEST_MAX_CONSECUTIVE_FAIL = 5,
+    HARVEST_PACKET_THROTTLE = 100,
+
+    -- =====================================================
+    -- 6) FITUR TAMBAHAN
+    -- =====================================================
+    AUTO_TRASH = false,         -- Kalau autobuy aktif, false agar hasil buy tidak ke-trash.
+    AUTO_BAN_PLAYERS = true,   -- Aktifkan hanya kalau bot owner/admin world.
+    WHITELIST_IDS = {
+        "69fe8ca94385df60d855afbe",
+    },
+
+    -- =====================================================
+    -- 7) WEBHOOK DISCORD
+    -- =====================================================
+    WEBHOOK_ENABLED = false,
+    WEBHOOK_URL = "https://discord.com/api/webhooks/1433797280875679844/qOuR31oSOd4ktg9ORznVfWdbhxThQ6aq4B_aUXu6mDZxQJWZtYeAvyG1_GZDbpCBjE3k",
+    WEBHOOK_NAME = "Bot1",
+}
+
+-- =========================================================
+-- PENGATURAN LANJUTAN
+-- Jangan ubah bagian ini kalau belum paham efeknya.
+-- =========================================================
+CONFIG = {
+    item_to_break = USER_CONFIG.ITEM_ID,
+    hit_required_to_break = USER_CONFIG.HIT_TO_BREAK,
+
+    farm_mode = USER_CONFIG.FARM_MODE,
+
+    stand_x = USER_CONFIG.PNB_X,
+    stand_y = USER_CONFIG.PNB_Y,
+
+    one_row = {
+        y = USER_CONFIG.ONE_ROW_Y,
+        pnb = {
+            stand_x = USER_CONFIG.PNB_X,
+            stand_y = USER_CONFIG.PNB_Y,
+        },
+        farm_area = {
+            min_x = USER_CONFIG.FARM_START_X,
+            max_x = USER_CONFIG.FARM_END_X,
+        },
+    },
+
+    anti_trash_ids = { USER_CONFIG.ITEM_ID, 3364, 3365, 3366 },
+    non_breakable_blocks = { 110, 2212, 37, 413 },
+    lock_id = 2212,
+
+    harvest_scan = {
+        min_x = 1,
+        max_x = 79,
+        min_y = 1,
+        max_y = 59,
+    },
+
+    plant_area = {
+        min_x = 1,
+        max_x = 78,
+        min_y = 3,
+        max_y = 29,
+    },
+
+    collect_radius = 5,
+    auto_trash_every = 30,
+
+    drop_seed = USER_CONFIG.DROP_SEED_ENABLED and {
+        x = USER_CONFIG.DROP_SEED_X,
+        y = USER_CONFIG.DROP_SEED_Y,
+        save_world = USER_CONFIG.DROP_SEED_SAVE_WORLD,
+        save_x = USER_CONFIG.DROP_SEED_SAVE_X,
+        save_y = USER_CONFIG.DROP_SEED_SAVE_Y,
+        threshold = USER_CONFIG.DROP_SEED_IF_SEED_AT_LEAST,
+        amount = USER_CONFIG.DROP_SEED_AMOUNT,
+    } or nil,
+
+    harvest_safety = {
+        max_pathfind_dist = USER_CONFIG.HARVEST_MAX_PATHFIND_DIST,
+        max_pathfind_timeout = USER_CONFIG.HARVEST_MAX_PATHFIND_TIMEOUT,
+        recovery_position = USER_CONFIG.HARVEST_RECOVERY_POSITION,
+        max_consecutive_fail = USER_CONFIG.HARVEST_MAX_CONSECUTIVE_FAIL,
+        packet_throttle = USER_CONFIG.HARVEST_PACKET_THROTTLE,
+    },
+
+    autobuy = {
+        enabled = USER_CONFIG.AUTOBUY_ENABLED,
+        check_every_cycle = USER_CONFIG.AUTOBUY_CHECK_EVERY_CYCLE,
+        buy_world = USER_CONFIG.AUTOBUY_SAVE_WORLD,
+        pack_id = USER_CONFIG.AUTOBUY_PACK_ID,
+        pack_cost = USER_CONFIG.AUTOBUY_PACK_COST,
+        buy_delay = USER_CONFIG.AUTOBUY_BUY_DELAY,
+        max_fail = USER_CONFIG.AUTOBUY_MAX_FAIL,
+        save_mode = USER_CONFIG.AUTOBUY_SAVE_MODE,
+        drop_position = {
+            x = USER_CONFIG.AUTOBUY_DROP_X,
+            y = USER_CONFIG.AUTOBUY_DROP_Y,
+        },
+        save_world = USER_CONFIG.AUTOBUY_SAVE_WORLD,
+        save_drop_y = USER_CONFIG.AUTOBUY_SAVE_DROP_Y,
+        save_drop_x_min = USER_CONFIG.AUTOBUY_SAVE_DROP_X_MIN,
+        save_drop_x_max = USER_CONFIG.AUTOBUY_SAVE_DROP_X_MAX,
+        drop_delay = USER_CONFIG.AUTOBUY_DROP_DELAY,
+    },
+
+    delays = {
+        harvest_hit = 250,
+        plant = 200,
+        trash = 1000,
+        pnb_finish = 500,
+        warp_retry = 1000,
+        pathfind = 100,
+        pathfind_settle = 300,
+        collect = 50,
+        loop = 50,
+        main_loop = 100,
+        ban_packet = 50,
+    },
+
+    world = {
+        name = USER_CONFIG.WORLD_NAME,
+    },
+
+    whitelist = USER_CONFIG.WHITELIST_IDS,
+
+    auto_ban_players = USER_CONFIG.AUTO_BAN_PLAYERS,
+    auto_trash_enabled = USER_CONFIG.AUTO_TRASH,
+
+    webhook = {
+        enabled = USER_CONFIG.WEBHOOK_ENABLED,
+        url = USER_CONFIG.WEBHOOK_URL,
+        username = USER_CONFIG.WEBHOOK_NAME,
+        avatar_url = "",
+        colors = {
+            success = 65280,
+            warning = 16776960,
+            error = 16711680,
+        },
+    },
+}
+
+item_to_break = CONFIG.item_to_break
+hit_required_to_break = CONFIG.hit_required_to_break
+anti_trash_ids = CONFIG.anti_trash_ids
+standX, standY = CONFIG.stand_x, CONFIG.stand_y
+standPosition = Vector2i.new(standX, standY)
+maximum_block = math.floor(300 / hit_required_to_break)
+
+client = getClient()
+global_farm_world = CONFIG.world.name or ""
+receivedFarmPacket = false
+
+NON_BREAKABLE_BLOCKS = CONFIG.non_breakable_blocks
+
+InventoryItemType = {
+    block = 0,
+    background = 1,
+    seed = 2,
+    water = 3,
+    wearable = 4,
+    weapon = 5,
+    throwable = 6,
+    consumable = 7,
+    shard = 8,
+    blueprint = 9,
+    familiar = 10,
+    food = 11,
+    wiring = 12
+}
+
+local TypeMap = {
+    [0] = "block",
+    [1] = "background",
+    [2] = "seed",
+    [3] = "water",
+    [4] = "wearable",
+    [5] = "weapon",
+    [6] = "throwable",
+    [7] = "consumable",
+    [8] = "shard",
+    [9] = "blueprint",
+    [10] = "familiar",
+    [11] = "food",
+    [12] = "wiring"
+}
+
+function send_webhook(title, description, color, fields)
+    if not CONFIG.webhook.enabled then return end
+    if not CONFIG.webhook.url or CONFIG.webhook.url == "" or CONFIG.webhook.url == "UR WEBHOOK" then return end
+
+    local embed = {
+        title = title,
+        description = description,
+        color = color or CONFIG.webhook.colors.success,
+        fields = fields or {},
+    }
+
+    pcall(function()
+        webhook(CONFIG.webhook.url, {
+            username = CONFIG.webhook.username,
+            avatar_url = CONFIG.webhook.avatar_url,
+            embeds = { embed }
+        })
+    end)
+end
+
+function is_one_row_mode()
+    return CONFIG.farm_mode == "one_row"
+end
+
+function get_harvest_bounds()
+    if is_one_row_mode() then
+        local area = get_farm_area()
+        return area.min_x, area.max_x, area.min_y, area.max_y
+    end
+    return CONFIG.harvest_scan.min_x, CONFIG.harvest_scan.max_x, CONFIG.harvest_scan.min_y, CONFIG.harvest_scan.max_y
+end
+
+function get_plant_bounds()
+    if is_one_row_mode() then
+        local area = get_farm_area()
+        return area.min_x, area.max_x, area.min_y, area.max_y
+    end
+    return CONFIG.plant_area.min_x, CONFIG.plant_area.max_x, CONFIG.plant_area.min_y, CONFIG.plant_area.max_y
+end
+
+function get_pnb_position()
+    if is_one_row_mode() then
+        return CONFIG.one_row.pnb.stand_x, CONFIG.one_row.pnb.stand_y
+    end
+    return CONFIG.stand_x, CONFIG.stand_y
+end
+
+function drop_seed_overflow()
+    local cfg = CONFIG.drop_seed
+    if not cfg then return end
+
+    local seed_count = get_item_count(item_to_break, InventoryItemType.seed)
+    if seed_count < cfg.threshold then return end
+
+    local original_world = global_farm_world
+    local drop_world = cfg.save_world
+    local drop_x = cfg.save_x
+    local drop_y = cfg.save_y
+
+    if not drop_world or drop_world == "" then
+        print("[DROP-SEED] DROP_SEED_SAVE_WORLD kosong, batal drop seed")
+        return
+    end
+
+    print("[DROP-SEED] Warp ke save world " .. drop_world)
+    WarpTo(drop_world)
+
+    local max_attempts = 3
+    for attempt = 1, max_attempts do
+        ensure_is_in_world(drop_world)
+
+        if ensure_at_tile and not is_in_tile(drop_x, drop_y) then
+            ensure_at_tile(drop_x, drop_y, 0, 2)
+        elseif not is_in_tile(drop_x, drop_y) then
+            local drop_pos = Vector2i.new(drop_x, drop_y)
+            print("[DROP-SEED] Jalan ke titik drop (" .. drop_x .. "," .. drop_y .. ") attempt=" .. attempt)
+            client:findPath(drop_pos)
+
+            local path_timeout = 0
+            while client:pathfinding() and path_timeout < 5000 do
+                sleep(CONFIG.delays.pathfind)
+                path_timeout = path_timeout + CONFIG.delays.pathfind
+                if not is_online() then break end
+            end
+
+            sleep(CONFIG.delays.pathfind_settle)
+        end
+
+        if is_in_tile(drop_x, drop_y) then
+            seed_count = get_item_count(item_to_break, InventoryItemType.seed)
+            local drop_amount = math.min(cfg.amount, seed_count)
+            print("[DROP-SEED] Drop " .. drop_amount .. " seed di " .. drop_world .. " (" .. drop_x .. "," .. drop_y .. ")")
+            client:drop(item_to_break, InventoryItemType.seed, drop_amount)
+            sleep(CONFIG.delays.trash)
+
+            local after_drop = get_item_count(item_to_break, InventoryItemType.seed)
+            if after_drop < seed_count then
+                print("[DROP-SEED] Berhasil. Seed: " .. seed_count .. " -> " .. after_drop)
+                print("[DROP-SEED] Balik ke farm world " .. original_world)
+                WarpTo(original_world)
+                return
+            end
+
+            print("[DROP-SEED] Drop belum terdeteksi, retry")
+        else
+            local my_pos = client:point()
+            print("[DROP-SEED] Gagal ke titik drop. Posisi sekarang (" .. my_pos.x .. "," .. my_pos.y .. ")")
+        end
+
+        sleep(CONFIG.delays.warp_retry)
+    end
+
+    print("[DROP-SEED] Balik ke farm world setelah gagal")
+    WarpTo(original_world)
+    print("[DROP-SEED] Gagal drop setelah " .. max_attempts .. " percobaan")
+end
+
+function auto_trash()
+    if not CONFIG.auto_trash_enabled then return end
+    for _, item in pairs(getInventory().items) do
+        local should_trash = true
+
+        for _, protected_id in pairs(anti_trash_ids) do
+            if item.id == protected_id then
+                should_trash = false
+                break
+            end
+        end
+
+        if should_trash then
+            local type_key = TypeMap[item.type]
+            if type_key then
+                local itemTypeEnum = InventoryItemType[type_key]
+
+                if get_item_count(item.id, itemTypeEnum) > 0 then
+                    client:trash(item.id, itemTypeEnum, get_item_count(item.id, itemTypeEnum))
+                    sleep(CONFIG.delays.trash)
+                end
+            end
+        end
+    end
+end
+
+function harvestable(tile)
+    if not tile or tile.foreground == 0 then return false end
+    local tree = tile:tree()
+    return tree ~= nil and tree:ready()
+end
+
+function has_harvestable_trees()
+    local world = getWorld()
+    if not world then return false end
+    local min_x, max_x, min_y, max_y = get_harvest_bounds()
+    for y = max_y, min_y, -1 do
+        for x = min_x, max_x do
+            if harvestable(world:tile(Vector2i.new(x, y))) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function move_safe(dir_x)
+    if not is_online() or get_nav() ~= global_farm_world:lower() then
+        return false
+    end
+
+    local moved = client:movePoint(Vector2i.new(dir_x, 0))
+    if moved then
+        sleep(math.random(140, 220))
+    end
+    return moved
+end
+
+function auto_harvest()
+    local harvested_count = 0
+    local last_harvest_pos = nil
+    local min_x, max_x, min_y, max_y = get_harvest_bounds()
+
+    print("[HARVEST] Row-walk harvest mulai")
+
+    for y = max_y, min_y, -2 do
+        ensure_is_in_world(global_farm_world)
+        if get_item_count(item_to_break) > 998 then break end
+
+        local world = client:world()
+        if not world then return end
+
+        local row_has_ready = false
+        for x = min_x, max_x do
+            if harvestable(world:tile(Vector2i.new(x, y))) then
+                row_has_ready = true
+                break
+            end
+        end
+
+        if row_has_ready then
+            local left_to_right = ((max_y - y) / 2) % 2 == 0
+            local start_pos = left_to_right and Vector2i.new(min_x - 1, y) or Vector2i.new(max_x + 1, y)
+            client:findPath(start_pos)
+            while client:pathfinding() do
+                if not is_online() or get_nav() ~= global_farm_world:lower() then return end
+                sleep(20)
+            end
+
+            if left_to_right then
+                for x = min_x, max_x do
+                    ensure_is_in_world(global_farm_world)
+                    world = client:world()
+                    if not world then return end
+
+                    local pos = Vector2i.new(x, y)
+                    local tile = world:tile(pos)
+                    if harvestable(tile) then
+                        print("[HARVEST] Hit " .. x .. "," .. y)
+                        client:hit(pos)
+                        harvested_count = harvested_count + 1
+                        last_harvest_pos = pos
+                        sleep(math.random(CONFIG.delays.harvest_hit, CONFIG.delays.harvest_hit + 50))
+                        collect_nearby_items(pos, CONFIG.collect_radius)
+                    end
+
+                    move_safe(1)
+                end
+            else
+                for x = max_x, min_x, -1 do
+                    ensure_is_in_world(global_farm_world)
+                    world = client:world()
+                    if not world then return end
+
+                    local pos = Vector2i.new(x, y)
+                    local tile = world:tile(pos)
+                    if harvestable(tile) then
+                        print("[HARVEST] Hit " .. x .. "," .. y)
+                        client:hit(pos)
+                        harvested_count = harvested_count + 1
+                        last_harvest_pos = pos
+                        sleep(math.random(CONFIG.delays.harvest_hit, CONFIG.delays.harvest_hit + 50))
+                        collect_nearby_items(pos, CONFIG.collect_radius)
+                    end
+
+                    move_safe(-1)
+                end
+            end
+
+            sleep(math.random(400, 700))
+        else
+            print("[HARVEST] Skip row y=" .. y)
+        end
+    end
+
+    if harvested_count > 0 and last_harvest_pos then
+        send_webhook(
+            "Panen",
+            "[PANEN] Panen " .. tostring(harvested_count) .. " kali, terakhir di (" ..
+            tostring(last_harvest_pos.x) .. ", " .. tostring(last_harvest_pos.y) .. ")",
+            CONFIG.webhook.colors.warning
+        )
+    end
+end
+
+function plant_seed(seed_id)
+    if not is_one_row_mode() then
+        ensure_is_in_world(global_farm_world)
+        local amount = client:inventory():count(seed_id, InventoryItemType.seed)
+        if amount <= 0 then
+            return
+        end
+
+        local world = getWorld()
+        if not world then return end
+
+        local iterations = 0
+        for y = 29, 3, -1 do
+            for x = 1, 78 do
+                iterations = iterations + 1
+                ensure_is_in_world(global_farm_world)
+                if iterations % CONFIG.auto_trash_every == 0 then auto_trash() end
+
+                if client:inventory():count(seed_id, InventoryItemType.seed) <= 0 then
+                    return
+                end
+
+                local tile = getWorld():tile(Vector2i.new(x, y))
+                local below = getWorld():tile(Vector2i.new(x, y + 1))
+
+                if tile.foreground == 0 and below.foreground ~= 0 and not is_non_breakable(below.foreground) then
+                    local my_pos = client:point()
+                    local dist = math.abs(my_pos.x - x) + math.abs(my_pos.y - y)
+
+                    if dist > 2 then
+                        client:findPath(Vector2i.new(x, y))
+                        while client:pathfinding() do
+                            sleep(50)
+                        end
+                    end
+
+                    client:place(Vector2i.new(x, y), seed_id, InventoryItemType.seed)
+                    sleep(100)
+                end
+            end
+        end
+        return
+    end
+
+    local planted_count = 0
+    local last_plant_pos = nil
+    ensure_is_in_world(global_farm_world)
+    local amount = client:inventory():count(seed_id, InventoryItemType.seed)
+    if amount <= 0 then
+        return
+    end
+
+    local world = getWorld()
+    if not world then return end
+
+    local iterations = 0
+    local min_x, max_x, min_y, max_y = get_plant_bounds()
+    for y = max_y, min_y, -1 do
+        for x = min_x, max_x do
+            iterations = iterations + 1
+            ensure_is_in_world(global_farm_world)
+            if iterations % CONFIG.auto_trash_every == 0 then auto_trash() end
+
+            if client:inventory():count(seed_id, InventoryItemType.seed) <= 0 then
+                return
+            end
+
+            local tile = getWorld():tile(Vector2i.new(x, y))
+            local below = getWorld():tile(Vector2i.new(x, y + 1))
+
+            if tile.foreground == 0 and below.foreground ~= 0 and not is_non_breakable(below.foreground) then
+                local my_pos = client:point()
+                local dist = math.abs(my_pos.x - x) + math.abs(my_pos.y - y)
+
+                if dist > 1 then
+                    client:findPath(Vector2i.new(x, y))
+                    local path_timeout = 0
+                    while client:pathfinding() and path_timeout < 5000 do
+                        sleep(CONFIG.delays.pathfind)
+                        path_timeout = path_timeout + CONFIG.delays.pathfind
+                    end
+                    sleep(CONFIG.delays.pathfind_settle)
+                end
+
+                client:place(Vector2i.new(x, y), seed_id, InventoryItemType.seed)
+                planted_count = planted_count + 1
+                last_plant_pos = Vector2i.new(x, y)
+                sleep(CONFIG.delays.plant)
+            end
+        end
+    end
+    if planted_count > 0 and last_plant_pos then
+        send_webhook(
+            "Tanam",
+            "[TANAM] Tanam di (" .. tostring(last_plant_pos.x) .. ", " .. tostring(last_plant_pos.y) .. ")",
+            CONFIG.webhook.colors.warning
+        )
+    end
+end
+
+function is_online()
+    if client:connected() and client:ping() > 0 then
+        return true
+    else
+        return false
+    end
+end
+
+function ensure_is_in_world(world_name)
+    if not is_online() or get_nav() ~= world_name:lower() then
+        WarpTo(world_name)
+    end
+end
+
+function is_in_tile(x, y)
+    local myPoint = client:point()
+    local result = myPoint.x == x and myPoint.y == y
+    return result
+end
+
+function wait_for_tutorial_to_finish()
+    if client:isInTutorial() == false then
+        return true
+    end
+    while client:isInTutorial() do
+        sleep(CONFIG.delays.warp_retry)
+        if client:isInTutorial() == false then
+            break
+        end
+    end
+    return false
+end
+
+-- =====================================================================
+-- breakBlocks pakai mode "presend" (cepat seperti versi awal),
+-- TAPI listener-nya disimpan dan dilepas setelah selesai supaya
+-- tidak menumpuk antar siklus.
+-- =====================================================================
+local break_listener = nil
+local break_active = false
+local break_done = false
+
+function breakBlocks(targetBlock, maxBlocks, minHits)
+    -- Pastikan tidak ada listener lama yang masih aktif
+    if break_listener ~= nil then
+        pcall(function() client:off("presend", break_listener) end)
+        break_listener = nil
+    end
+
+    break_active = true
+    break_done = false
+
+    break_listener = function(message)
+        if not break_active then return end
+
+        local amount = client:inventory():count(targetBlock, InventoryItemType.block)
+        local clientPoint = client:point()
+
+        local positions = {
+            Vector2i.new(clientPoint.x - 2, clientPoint.y + 1),
+            Vector2i.new(clientPoint.x - 1, clientPoint.y + 1),
+            Vector2i.new(clientPoint.x + 0, clientPoint.y + 1),
+            Vector2i.new(clientPoint.x + 1, clientPoint.y + 1),
+            Vector2i.new(clientPoint.x + 2, clientPoint.y + 1)
+        }
+
+        local totalBlocks = math.min(amount, maxBlocks)
+        local posIndex = 1
+
+        for i = 1, totalBlocks do
+            local tilePoint = positions[posIndex]
+
+            client:place(tilePoint, targetBlock, InventoryItemType.block)
+
+            for j = 1, minHits do
+                client:send("HB", {
+                    x = tilePoint.x,
+                    y = tilePoint.y
+                })
+            end
+
+            posIndex = posIndex + 1
+            if posIndex > #positions then
+                posIndex = 1
+            end
+        end
+
+        -- Tandai selesai dan langsung non-aktifkan supaya tidak jalan lagi
+        break_active = false
+        break_done = true
+    end
+
+    client:on("presend", break_listener)
+end
+
+-- Lepas listener presend secara aman setelah break selesai
+function stop_break_listener()
+    break_active = false
+    if break_listener ~= nil then
+        pcall(function() client:off("presend", break_listener) end)
+        break_listener = nil
+    end
+end
+
+function get_farm_area()
+    if not is_one_row_mode() then return nil end
+    local area = CONFIG.one_row.farm_area or {
+        min_x = 1,
+        max_x = 78,
+    }
+    return {
+        min_x = area.min_x,
+        max_x = area.max_x,
+        min_y = CONFIG.one_row.y,
+        max_y = CONFIG.one_row.y,
+    }
+end
+
+function get_pnb_collect_area()
+    if not is_one_row_mode() then return nil end
+    local pnb_x, pnb_y = get_pnb_position()
+    return {
+        min_x = pnb_x - 2,
+        max_x = pnb_x + 2,
+        min_y = pnb_y + 1,
+        max_y = pnb_y + 1,
+    }
+end
+
+function is_point_in_area(point, area)
+    if not area then return true end
+    return point.x >= area.min_x and point.x <= area.max_x and
+        point.y >= area.min_y and point.y <= area.max_y
+end
+
+function is_collectable_owned_by_this_bot(point, source)
+    if not is_one_row_mode() then return true end
+    if source == "pnb" then
+        return is_point_in_area(point, get_pnb_collect_area())
+    end
+    return is_point_in_area(point, get_farm_area())
+end
+
+function collect_nearby_items(center_point, radius, source)
+    radius = radius or CONFIG.collect_radius
+    source = source or "farm"
+
+    local world = client:world()
+    if not world then return end
+
+    for id, collectable in pairs(world.collectables) do
+        if not is_online() or get_nav() ~= global_farm_world:lower() then
+            return
+        end
+
+        local item_pos = collectable:point()
+        local dx = math.abs(center_point.x - item_pos.x)
+        local dy = math.abs(center_point.y - item_pos.y)
+
+        if dx <= radius and dy <= radius and (not is_one_row_mode() or is_collectable_owned_by_this_bot(item_pos, source)) then
+            client:collect(id)
+            sleep(math.random(100, 160))
+        end
+    end
+end
+
+function collect_all_items(source)
+    source = source or "farm"
+    local failed_items = {}         -- track item yang gagal di-collect
+    local max_iterations = 50       -- batas total iterasi (safety)
+    local max_attempts_per_item = 2 -- batas coba per item
+    local iter = 0
+
+    while iter < max_iterations do
+        iter = iter + 1
+        ensure_is_in_world(global_farm_world)
+        local world = client:world()
+
+        if not world then
+            sleep(CONFIG.delays.warp_retry)
+        else
+            local items = world.collectables
+            local nearest_id = nil
+            local min_dist = 9999
+            local my_pos = client:point()
+            local total_items = 0
+
+            for id, collectable in pairs(items) do
+                total_items = total_items + 1
+                -- skip item yang sudah dicoba terlalu banyak kali
+                if (failed_items[id] or 0) < max_attempts_per_item then
+                    local item_pos = collectable:point()
+                    if not is_one_row_mode() or is_collectable_owned_by_this_bot(item_pos, source) then
+                        local dist = math.abs(my_pos.x - item_pos.x) + math.abs(my_pos.y - item_pos.y)
+                        if dist < min_dist then
+                            min_dist = dist
+                            nearest_id = id
+                        end
+                    end
+                end
+            end
+
+            if total_items == 0 then
+                print("[COLLECT] Tidak ada item lagi, keluar (iter=" .. iter .. ")")
+                return
+            end
+
+            if not nearest_id then
+                print("[COLLECT] Semua item sisa sudah di-blacklist, keluar (sisa=" .. total_items .. ")")
+                return
+            end
+
+            local item = items[nearest_id]
+            if not item then
+                failed_items[nearest_id] = max_attempts_per_item
+            else
+                local item_point = item:point()
+
+                -- pathfind dengan timeout
+                client:findPath(item_point)
+                local path_timeout = 0
+                while client:pathfinding() and path_timeout < 3000 do
+                    sleep(CONFIG.delays.loop)
+                    path_timeout = path_timeout + CONFIG.delays.loop
+                    if not is_online() then break end
+                end
+
+                if is_online() and get_nav() == global_farm_world:lower() then
+                    client:collect(nearest_id)
+                    sleep(CONFIG.delays.collect)
+                end
+
+                -- cek apakah item benar-benar terambil
+                local still_exists = false
+                local world2 = client:world()
+                if world2 and world2.collectables then
+                    for id, _ in pairs(world2.collectables) do
+                        if id == nearest_id then
+                            still_exists = true
+                            break
+                        end
+                    end
+                end
+
+                if still_exists then
+                    failed_items[nearest_id] = (failed_items[nearest_id] or 0) + 1
+                    print("[COLLECT] Item " .. tostring(nearest_id) .. " masih ada, attempt=" .. failed_items
+                        [nearest_id])
+                end
+            end
+        end
+    end
+
+    print("[COLLECT] Max iterasi tercapai (" .. max_iterations .. "), keluar")
+end
+
+-- =====================================================================
+-- collect_all_items_verified:
+-- Jalankan collect_all_items berulang sampai benar-benar tidak ada
+-- collectable lagi yang bisa diambil. Cross-check setiap pass untuk
+-- memastikan tidak ada drop yang tertinggal.
+-- Berguna setelah harvest atau setelah break, di mana banyak drop
+-- bermunculan secara bertahap (delay server, animasi drop, dll).
+-- =====================================================================
+function collect_all_items_verified(source)
+    if not source then
+        print("[COLLECT-VERIFY] Collect default: PNB dulu, lalu farm")
+        local pnb_clean = collect_all_items_verified("pnb")
+        local farm_clean = collect_all_items_verified("farm")
+        return pnb_clean and farm_clean
+    end
+
+    local max_passes = 5
+    for pass = 1, max_passes do
+        print("[COLLECT-VERIFY] Pass " .. pass .. "/" .. max_passes .. " source=" .. source)
+        collect_all_items(source)
+
+        -- Tunggu sebentar untuk drop yang mungkin baru muncul / sinkronisasi server
+        sleep(500)
+
+        -- Cek apakah masih ada collectable di world
+        local world = client:world()
+        if not world then
+            print("[COLLECT-VERIFY] World null, retry")
+        else
+            local count = 0
+            for _, collectable in pairs(world.collectables) do
+                if is_collectable_owned_by_this_bot(collectable:point(), source) then
+                    count = count + 1
+                end
+            end
+
+            print("[COLLECT-VERIFY] Pass " .. pass .. " selesai, sisa collectable = " .. count)
+
+            if count == 0 then
+                print("[COLLECT-VERIFY] BERSIH! Tidak ada collectable tersisa.")
+                return true
+            end
+        end
+    end
+    print("[COLLECT-VERIFY] Selesai " .. max_passes .. " pass, masih ada sisa (mungkin unreachable)")
+    return false
+end
+
+function is_non_breakable(id)
+    for _, block_id in ipairs(NON_BREAKABLE_BLOCKS) do
+        if id == block_id then
+            return true
+        end
+    end
+    return false
+end
+
+function get_nav()
+    return client:navigation():lower()
+end
+
+function WarpTo(world_name)
+    while not is_online() do
+        sleep(CONFIG.delays.warp_retry)
+    end
+    while is_online() and get_nav() ~= world_name:lower() do
+        if get_nav() ~= world_name:lower() then
+            client:warp(world_name:upper())
+            for i = 1, 10 do
+                sleep(CONFIG.delays.warp_retry)
+                if get_nav() == world_name:lower() then
+                    send_webhook(
+                        "Teleport Berhasil",
+                        "[WARP] Teleport ke " .. world_name:upper() .. " berhasil",
+                        CONFIG.webhook.colors.success
+                    )
+                    break
+                end
+            end
+        end
+    end
+end
+
+function get_item_count(item_id, item_type)
+    return client:inventory():count(item_id, item_type or InventoryItemType.block)
+end
+
+function get_global_farm_world()
+    if CONFIG.world.name ~= "" then
+        global_farm_world = CONFIG.world.name
+        return global_farm_world
+    end
+
+    if global_farm_world ~= "" then
+        return global_farm_world
+    end
+
+    while not is_online() do
+        sleep(CONFIG.delays.warp_retry)
+    end
+
+    receivedFarmPacket = false
+    client:send("GWLW", { Idx = 0 })
+
+    local timeout = 0
+    while is_online() and not receivedFarmPacket and timeout < 10000 do
+        sleep(CONFIG.delays.harvest_hit)
+        timeout = timeout + CONFIG.delays.harvest_hit
+    end
+
+    receivedFarmPacket = false
+    return global_farm_world
+end
+
+function check_is_locked(optional_world_name)
+    local target_world = optional_world_name or global_farm_world
+
+    if target_world == "" or get_nav() == target_world:lower() then
+        local pos = Vector2i.new(client:point().x, client:point().y + 1)
+        if getWorld():tile(pos).foreground == CONFIG.lock_id then
+            return true
+        end
+    end
+    return false
+end
+
+function create_my_first_world()
+    print("CONFIG.world.name wajib diisi. Auto-generate world dimatikan.")
+    return false
+end
+
+client:on("p:GWLW", function(msg)
+    receivedFarmPacket = true
+    if msg.W0 then
+        global_farm_world = msg.W0.WorldName or ""
+        print("Found farm world: " .. global_farm_world)
+    else
+        global_farm_world = ""
+    end
+end)
+
+function is_whitelisted(player_id)
+    for _, whitelisted_id in pairs(CONFIG.whitelist) do
+        if player_id == whitelisted_id then
+            return true
+        end
+    end
+    return false
+end
+
+function get_my_id()
+    local ok, id = pcall(function()
+        if client.id then
+            if type(client.id) == "function" then
+                return client:id()
+            else
+                return client.id
+            end
+        end
+        return nil
+    end)
+    if ok then return id end
+    return nil
+end
+
+function ban_active_players()
+    if not CONFIG.auto_ban_players then return end
+    if get_nav() ~= global_farm_world:lower() then return end
+
+    local world = getWorld()
+    if not world or not world.players then return end
+
+    local my_id = get_my_id()
+
+    for _, player in pairs(world.players) do
+        if player.id ~= my_id and not is_whitelisted(player.id) then
+            pcall(function()
+                client:send("BPl", { U = player.id })
+            end)
+            sleep(CONFIG.delays.ban_packet)
+        end
+    end
+end
+
+client:on("p:AnP", function(msg)
+    if not CONFIG.auto_ban_players then return end
+    if get_nav() ~= global_farm_world:lower() then return end
+
+    local my_id = get_my_id()
+    if msg.U == my_id then return end
+
+    if not is_whitelisted(msg.U) then
+        pcall(function()
+            client:send("BPl", { U = msg.U })
+        end)
+    end
+end)
+
+function init_client()
+    local notified_disconnect = false
+    while not is_online() do
+        if not notified_disconnect then
+            send_webhook(
+                "Bot Terputus",
+                "Bot terputus! Akan terhubung kembali dalam 3 detik...",
+                CONFIG.webhook.colors.error
+            )
+            notified_disconnect = true
+        end
+        sleep(CONFIG.delays.warp_retry)
+    end
+    print("[INIT] Bot online")
+    send_webhook(
+        "Bot Terhubung",
+        "Bot terhubung kembali! Teleport ke dunia farm...",
+        CONFIG.webhook.colors.success
+    )
+    while is_online() do
+        print("[INIT] wait_tutorial_to_finish (in_tutorial=" .. tostring(client:isInTutorial()) .. ")")
+        wait_for_tutorial_to_finish()
+        if wait_for_tutorial_to_finish() and is_online() then
+            print("[INIT] Tutorial selesai, cari farm world...")
+            local fw = get_global_farm_world()
+            print("[INIT] Farm world = '" .. tostring(fw) .. "'")
+            if fw == "" then
+                print("[INIT] No farm world found. Isi CONFIG.world.name dulu.")
+                return false
+            end
+            if get_global_farm_world() ~= "" then
+                print("[INIT] WarpTo " .. global_farm_world)
+                WarpTo(global_farm_world)
+            end
+            print("[INIT] Nav sekarang = '" .. get_nav() .. "', target = '" .. global_farm_world:lower() .. "'")
+            if get_nav() == global_farm_world:lower() then
+                print("[INIT] Sudah di world farm, mulai main()")
+                send_webhook(
+                    "Bot Mulai Farming",
+                    "Bot mulai farming!",
+                    CONFIG.webhook.colors.success,
+                    {
+                        { name = "Posisi Start",  value = "(" .. tostring(client:point().x) .. ", " .. tostring(client:point().y) .. ")",                inline = true },
+                        { name = "Posisi Simpan", value = "(" .. tostring(get_pnb_position()) .. ", " .. tostring(select(2, get_pnb_position())) .. ")", inline = true },
+                    }
+                )
+                return true
+            end
+        end
+    end
+end
+
+-- =====================================================================
+-- pnb() VERSI BARU:
+-- - Tidak ada client:disconnect() lagi (penyebab kick di siklus berikutnya).
+-- - Setelah breakBlocks selesai, listener dilepas dengan stop_break_listener().
+-- - Setelah itu langsung return ke main(), yang akan melanjutkan
+--   ke collect_all_items() lalu plant_seed/auto_harvest.
+-- =====================================================================
+function pnb()
+    if not is_one_row_mode() then
+        local pnb_x, pnb_y = get_pnb_position()
+        local pnb_position = Vector2i.new(pnb_x, pnb_y)
+        ensure_is_in_world(global_farm_world)
+        if get_nav() == global_farm_world:lower() then
+            if not is_in_tile(pnb_x, pnb_y) then
+                client:findPath(pnb_position)
+                while client:pathfinding() do
+                    sleep(1)
+                end
+            end
+            if is_in_tile(pnb_x, pnb_y) and get_item_count(item_to_break) > 0 then
+                breakBlocks(item_to_break, maximum_block, hit_required_to_break)
+                sleep(1800)
+                client:disconnect()
+                while not is_online() do sleep(100) end
+            end
+        end
+        return
+    end
+
+    local pnb_x, pnb_y = get_pnb_position()
+    local pnb_position = Vector2i.new(pnb_x, pnb_y)
+    ensure_is_in_world(global_farm_world)
+    if get_nav() == global_farm_world:lower() then
+        if not is_in_tile(pnb_x, pnb_y) then
+            client:findPath(pnb_position)
+            while client:pathfinding() do
+                sleep(CONFIG.delays.loop)
+            end
+        end
+        if is_in_tile(pnb_x, pnb_y) and get_item_count(item_to_break) > 0 then
+            local block_count = get_item_count(item_to_break, InventoryItemType.block)
+            local break_count = math.min(block_count, maximum_block)
+            send_webhook(
+                "Menghancurkan Block",
+                "Bot mau menghancurkan " .. tostring(break_count) .. " block",
+                CONFIG.webhook.colors.warning,
+                {
+                    { name = "Block ID",    value = tostring(item_to_break), inline = true },
+                    { name = "Total Block", value = tostring(block_count),   inline = true },
+                }
+            )
+
+            -- Daftarkan listener presend untuk break
+            breakBlocks(item_to_break, maximum_block, hit_required_to_break)
+
+            -- Tunggu sampai listener menyelesaikan satu siklus break
+            -- (presend listener akan set break_done = true setelah selesai)
+            local timeout = 0
+            while not break_done and timeout < 5000 do
+                sleep(CONFIG.delays.harvest_hit)
+                timeout = timeout + CONFIG.delays.harvest_hit
+            end
+
+            -- WAJIB: lepas listener supaya tidak menumpuk di siklus berikutnya
+            stop_break_listener()
+
+            sleep(CONFIG.delays.pnb_finish)
+
+            send_webhook(
+                "Break Selesai",
+                "Selesai menghancurkan block, lanjut collect & farming...",
+                CONFIG.webhook.colors.success
+            )
+        end
+    end
+end
+
+function get_gems()
+    local ok, gems = pcall(function() return client.gems end)
+    if ok and type(gems) == "number" then return gems end
+
+    ok, gems = pcall(function() return client:gems() end)
+    if ok and type(gems) == "number" then return gems end
+
+    return 0
+end
+
+function get_total_items()
+    local total = 0
+    local ok, inv = pcall(function() return client:inventory() end)
+    if not ok or not inv or not inv.items then return 0 end
+
+    for _, item in pairs(inv.items) do
+        if item and item.amount and item.amount > 0 then
+            total = total + item.amount
+        end
+    end
+    return total
+end
+
+function wait_for_world_load(timeout_ms)
+    timeout_ms = timeout_ms or 20000
+    local t = 0
+    while t < timeout_ms do
+        local ok, nav = pcall(function() return client:navigation() end)
+        if ok and nav and nav ~= "" and nav ~= "#menu" and nav:lower() ~= "exit" then
+            return true, nav
+        end
+        sleep(1000)
+        t = t + 1000
+    end
+    return false, nil
+end
+
+function ensure_at_tile(target_x, target_y, tolerance, max_retry)
+    tolerance = tolerance or 0
+    max_retry = max_retry or 3
+    local target = Vector2i.new(target_x, target_y)
+
+    for attempt = 1, max_retry do
+        if not is_online() then
+            print("[ENSURE-TILE] Offline, abort")
+            return false
+        end
+
+        local my_pos = client:point()
+        if my_pos then
+            local dist = math.abs(my_pos.x - target_x) + math.abs(my_pos.y - target_y)
+            if dist <= tolerance then return true end
+
+            print("[ENSURE-TILE] Attempt " .. attempt .. "/" .. max_retry .. ": pathfind ke (" .. target_x .. "," .. target_y .. ")")
+            pcall(function() client:findPath(target) end)
+
+            local t = 0
+            while client:pathfinding() and t < 10000 do
+                sleep(200)
+                t = t + 200
+                if not is_online() then return false end
+            end
+
+            sleep(500)
+            my_pos = client:point()
+            if my_pos then
+                local new_dist = math.abs(my_pos.x - target_x) + math.abs(my_pos.y - target_y)
+                if new_dist <= tolerance then return true end
+            end
+        end
+
+        sleep(1000)
+    end
+
+    print("[ENSURE-TILE] GAGAL setelah " .. max_retry .. " retry")
+    return false
+end
+
+PACK_DROPS_CACHE = nil
+
+function is_pack_drop(id)
+    if not PACK_DROPS_CACHE then
+        PACK_DROPS_CACHE = {}
+        local pack = getPack(CONFIG.autobuy.pack_id)
+        if pack and pack.drops then
+            for _, drop in pairs(pack.drops) do
+                PACK_DROPS_CACHE[drop.id] = true
+            end
+        end
+    end
+    return PACK_DROPS_CACHE[id] == true
+end
+
+function drop_all_items()
+    print("[AUTOBUY] Drop item hasil pack saja")
+    local ok, inv = pcall(function() return client:inventory() end)
+    if not ok or not inv or not inv.items then return 0 end
+
+    local dropped = 0
+    for _, item in pairs(inv.items) do
+        if item and item.amount and item.amount > 0 then
+            if is_pack_drop(item.id) then
+                print("[AUTOBUY] Drop pack item " .. item.id .. " x" .. item.amount)
+                pcall(function() client:drop(item.id, item.type, item.amount) end)
+                dropped = dropped + item.amount
+                sleep(CONFIG.autobuy.drop_delay)
+            end
+        end
+    end
+    return dropped
+end
+
+function autobuy_routine()
+    if not CONFIG.autobuy.enabled then return end
+
+    local gems = get_gems()
+    if gems < CONFIG.autobuy.pack_cost then return end
+
+    print("[AUTOBUY] === Mulai autobuy (gems=" .. gems .. ") ===")
+    send_webhook(
+        "Auto Buy Mulai",
+        "Gems = " .. gems .. " >= " .. CONFIG.autobuy.pack_cost .. "\nMulai warp ke " .. CONFIG.autobuy.buy_world,
+        CONFIG.webhook.colors.success
+    )
+
+    pcall(function() client:warp(CONFIG.autobuy.buy_world:upper()) end)
+    local warp_ok, nav = wait_for_world_load(20000)
+    if not warp_ok then
+        send_webhook("Auto Buy Error", "Gagal masuk " .. CONFIG.autobuy.buy_world, CONFIG.webhook.colors.error)
+        return
+    end
+
+    print("[AUTOBUY] Sudah di " .. tostring(nav))
+    sleep(3000)
+
+    local bought = 0
+    local failed = 0
+    while true do
+        if not is_online() then return end
+
+        local cur_gems = get_gems()
+        if cur_gems < CONFIG.autobuy.pack_cost then break end
+
+        local before_gems = cur_gems
+        pcall(function()
+            client:send("gnNm", {
+                mXFc = CONFIG.autobuy.pack_id,
+                MiiN = {}
+            })
+        end)
+
+        local wait_gem = 0
+        while get_gems() >= before_gems and wait_gem < 20 do
+            sleep(50)
+            wait_gem = wait_gem + 1
+        end
+
+        local after_gems = get_gems()
+        if after_gems < before_gems then
+            failed = 0
+            bought = bought + 1
+            print("[AUTOBUY] Bought x" .. bought .. " | gems=" .. after_gems)
+        else
+            failed = failed + 1
+            print("[AUTOBUY] Buy failed (" .. failed .. "/" .. CONFIG.autobuy.max_fail .. ")")
+            if failed >= CONFIG.autobuy.max_fail then break end
+            sleep(1000)
+        end
+
+        sleep(50)
+    end
+
+    send_webhook(
+        "Auto Buy Selesai",
+        "Total bought: " .. bought .. "\nGems tersisa: " .. get_gems() .. "\nSave mode: " .. CONFIG.autobuy.save_mode,
+        CONFIG.webhook.colors.success
+    )
+
+    if CONFIG.autobuy.save_mode == "auto" then
+        pcall(function() client:warp(global_farm_world:upper()) end)
+        local back_ok = wait_for_world_load(20000)
+        if not back_ok then
+            send_webhook("Auto Buy Error", "Gagal balik ke world farm, item tidak di-drop", CONFIG.webhook.colors.error)
+            return
+        end
+
+        sleep(3000)
+        local drop_x = CONFIG.autobuy.drop_position.x
+        local drop_y = CONFIG.autobuy.drop_position.y
+        if not ensure_at_tile(drop_x, drop_y, 0, 5) then
+            send_webhook("Auto Buy Error", "Gagal sampai ke tile drop. Item tetap di inventory.", CONFIG.webhook.colors.error)
+            return
+        end
+        sleep(500)
+        drop_all_items()
+    elseif CONFIG.autobuy.save_mode == "world" or CONFIG.autobuy.save_mode == "portal" then
+        pcall(function() client:warp(CONFIG.autobuy.save_world:upper()) end)
+        local save_ok = wait_for_world_load(20000)
+        if not save_ok then
+            send_webhook("Auto Buy Error", "Gagal masuk save world, item tidak di-drop", CONFIG.webhook.colors.error)
+            return
+        end
+
+        sleep(3000)
+        local rx = math.random(CONFIG.autobuy.save_drop_x_min, CONFIG.autobuy.save_drop_x_max)
+        local ry = CONFIG.autobuy.save_drop_y
+        if not ensure_at_tile(rx, ry, 0, 5) then
+            local retry_success = false
+            for retry_x = CONFIG.autobuy.save_drop_x_min, CONFIG.autobuy.save_drop_x_max do
+                if ensure_at_tile(retry_x, ry, 0, 2) then
+                    retry_success = true
+                    break
+                end
+            end
+            if not retry_success then
+                send_webhook("Auto Buy Error", "Gagal sampai ke tile drop save world. Item tetap di inventory.", CONFIG.webhook.colors.error)
+                return
+            end
+        end
+        sleep(500)
+        drop_all_items()
+    end
+
+    pcall(function() client:warp(global_farm_world:upper()) end)
+    if wait_for_world_load(20000) then
+        sleep(2000)
+        send_webhook("Auto Buy Done", "Bot balik ke world farm, lanjut farming", CONFIG.webhook.colors.success)
+    end
+end
+
+function check_autobuy()
+    if CONFIG.autobuy.enabled and CONFIG.autobuy.check_every_cycle and get_gems() >= CONFIG.autobuy.pack_cost then
+        print("[MAIN] Gems cukup (" .. get_gems() .. "), trigger autobuy")
+        autobuy_routine()
+        ensure_is_in_world(global_farm_world)
+    end
+end
+
+function main_one_row()
+    while true do
+        print("[MAIN one_row] === Siklus baru ===")
+
+        check_autobuy()
+        ban_active_players()
+
+        print("[PRIORITAS 0] Cek seed overflow")
+        drop_seed_overflow()
+
+        print("[PRIORITAS 1] Verified collect (cross-check sampai bersih)")
+        collect_all_items_verified()
+        auto_trash()
+
+        local block_count = get_item_count(item_to_break, InventoryItemType.block)
+        local seed_count = get_item_count(item_to_break, InventoryItemType.seed)
+
+        print("[MAIN one_row] Setelah seed check + collect bersih → Block: " .. block_count ..
+            ", Seed: " .. seed_count)
+
+        if block_count >= hit_required_to_break then
+            print("[PRIORITAS 2] Block cukup (" .. block_count .. "), MULAI BREAK SAMPAI HABIS")
+
+            local break_iter = 0
+            while get_item_count(item_to_break, InventoryItemType.block) >= hit_required_to_break do
+                break_iter = break_iter + 1
+                local cur_block = get_item_count(item_to_break, InventoryItemType.block)
+                print("[BREAK iter=" .. break_iter .. "] Block tersisa = " .. cur_block)
+
+                pnb()
+                collect_all_items_verified("pnb")
+                ban_active_players()
+
+                if not is_in_tile(get_pnb_position()) and
+                    get_item_count(item_to_break, InventoryItemType.block) >= cur_block then
+                    print("[BREAK] Block tidak berkurang & bukan di tile PNB, keluar loop")
+                    break
+                end
+
+                if break_iter > 100 then
+                    print("[BREAK] Iterasi melebihi 100, keluar")
+                    break
+                end
+            end
+
+            print("[BREAK] SELESAI semua block sudah di-break")
+            stop_break_listener()
+            auto_trash()
+            sleep(CONFIG.delays.main_loop)
+        else
+            local has_ready = has_harvestable_trees()
+            print("[MAIN one_row] Tidak ada block cukup. ready_trees=" .. tostring(has_ready))
+
+            if has_ready then
+                print("[PRIORITAS 3] Pohon ready ditemukan → harvest")
+                send_webhook(
+                    "Mulai Panen",
+                    "Memulai harvest pohon yang siap...",
+                    CONFIG.webhook.colors.warning
+                )
+                auto_harvest()
+            elseif seed_count > 0 then
+                print("[PRIORITAS 4] Tidak ada pohon ready, ada seed → tanam")
+                send_webhook(
+                    "Mulai Tanam",
+                    "Memulai penanaman " .. tostring(seed_count) .. " seed...",
+                    CONFIG.webhook.colors.warning
+                )
+                plant_seed(item_to_break)
+                auto_trash()
+            else
+                print("[IDLE] Tidak ada kerjaan, tunggu pohon tumbuh (5 detik)...")
+                sleep(CONFIG.delays.warp_retry * 5)
+            end
+        end
+
+        sleep(CONFIG.delays.main_loop)
+    end
+end
+
+function main_full()
+    while true do
+        print("[MAIN full] === Siklus baru ===")
+        check_autobuy()
+        ban_active_players()
+        drop_seed_overflow()
+
+        while get_item_count(item_to_break, InventoryItemType.block) >= hit_required_to_break do
+            pnb()
+            collect_all_items_verified("pnb")
+            ban_active_players()
+            drop_seed_overflow()
+        end
+
+        collect_all_items_verified()
+        auto_trash()
+
+        while get_item_count(item_to_break, InventoryItemType.seed) > 0 or has_harvestable_trees() do
+            ban_active_players()
+            drop_seed_overflow()
+
+            if get_item_count(item_to_break, InventoryItemType.seed) > 0 then
+                plant_seed(item_to_break)
+            end
+
+            if has_harvestable_trees() then
+                auto_harvest()
+            end
+
+            collect_all_items_verified()
+            auto_trash()
+
+            if get_item_count(item_to_break, InventoryItemType.seed) == 0 and not has_harvestable_trees() then
+                break
+            end
+
+            sleep(CONFIG.delays.main_loop)
+        end
+
+        sleep(CONFIG.delays.main_loop)
+    end
+end
+
+function main()
+    local init_ok = init_client()
+    print("[MAIN] init_client return = " .. tostring(init_ok))
+    print("[MAIN] Mode = " .. tostring(CONFIG.farm_mode))
+
+    if is_one_row_mode() then
+        main_one_row()
+    else
+        main_full()
+    end
+end
+
+main()
