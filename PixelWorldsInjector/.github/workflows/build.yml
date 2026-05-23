@@ -1,0 +1,50 @@
+name: build
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "PixelWorldsInjector/**"
+      - ".github/workflows/build.yml"
+  pull_request:
+    paths:
+      - "PixelWorldsInjector/**"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build PixelWorldsInjector (Windows)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: PixelWorldsInjector
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore PixelWorldsInjector.sln
+
+      - name: Build
+        run: dotnet build PixelWorldsInjector.sln -c Release --no-restore
+
+      - name: Publish (single-file win-x64)
+        run: |
+          dotnet publish src/PixelWorldsInjector/PixelWorldsInjector.csproj `
+            -c Release -r win-x64 --self-contained false `
+            -p:PublishSingleFile=true `
+            -o publish
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PixelWorldsInjector-win-x64
+          path: PixelWorldsInjector/publish/PixelWorldsInjector.exe
+          if-no-files-found: error
+          retention-days: 30
