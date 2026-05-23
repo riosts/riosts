@@ -64,13 +64,15 @@ public sealed class SteamEmu
 
         var backupExists = File.Exists(pair.BackupPath);
         var activeExists = File.Exists(pair.ActivePath);
-        var isGoldberg = activeExists && LooksLikeGoldberg(pair.ActivePath);
+        var activeSize = activeExists ? new FileInfo(pair.ActivePath).Length : 0;
+        var backupSize = backupExists ? new FileInfo(pair.BackupPath).Length : 0;
+        var isGoldberg = activeExists && LooksLikeGoldberg(pair.ActivePath, backupExists ? backupSize : null);
         var rel = Path.GetRelativePath(gameDir, pair.ActivePath);
         return new InstallStatus(
             Installed: backupExists && isGoldberg,
             OriginalDllPath: pair.BackupPath,
             ActiveDllPath: pair.ActivePath,
-            Detail: $"active='{rel}' (goldberg={isGoldberg}) backup={(backupExists ? "yes" : "no")}");
+            Detail: $"active='{rel}' size={activeSize}B (goldberg={isGoldberg}) backup={(backupExists ? $"yes size={backupSize}B" : "no")}");
     }
 
     /// <summary>
@@ -96,7 +98,7 @@ public sealed class SteamEmu
         // 1. Main DLL swap.
         if (!File.Exists(pair.BackupPath))
         {
-            if (File.Exists(pair.ActivePath) && LooksLikeGoldberg(pair.ActivePath))
+            if (File.Exists(pair.ActivePath) && LooksLikeGoldberg(pair.ActivePath, null))
             {
                 throw new InvalidOperationException(
                     $"The current {Path.GetFileName(pair.ActivePath)} already looks like GoldBerg but no original backup exists. " +
@@ -130,7 +132,7 @@ public sealed class SteamEmu
 
             var dst = Path.Combine(targetDir, companion);
             var dstBackup = Path.ChangeExtension(dst, null) + BackupSuffix;
-            if (File.Exists(dst) && !File.Exists(dstBackup) && !LooksLikeGoldberg(dst))
+            if (File.Exists(dst) && !File.Exists(dstBackup) && !LooksLikeGoldberg(dst, null))
             {
                 File.Move(dst, dstBackup, overwrite: false);
                 Logger.Info($"Backed up original {dst} to {Path.GetFileName(dstBackup)}");
@@ -182,7 +184,7 @@ public sealed class SteamEmu
                 File.Move(dstBackup, dst);
                 Logger.Info($"Restored companion {dst} from backup.");
             }
-            else if (File.Exists(dst) && LooksLikeGoldberg(dst))
+            else if (File.Exists(dst) && LooksLikeGoldberg(dst, null))
             {
                 File.Delete(dst);
                 Logger.Info($"Removed orphan GoldBerg companion {dst} (no backup to restore).");
@@ -332,19 +334,55 @@ public sealed class SteamEmu
     }
 
     /// <summary>
-    /// Heuristic detection: read the first ~512KB of the DLL and look for any of a few
-    /// known GoldBerg / Steam-emu strings. Cheap and good enough to tell a real Valve
-    /// <c>steam_api64.dll</c> from a GoldBerg one without parsing PE metadata.
+    /// Heuristic detection of a GoldBerg / gbe_fork Steam API DLL. We look for any of a
+    /// few known marker strings (ASCII and UTF-16) inside the binary, plus a size-delta
+    /// fallback when the original Valve DLL is available as a backup.
     /// </summary>
-    private static bool LooksLikeGoldberg(string dllPath)
+    /// <param name="dllPath">The DLL to inspect.</param>
+    /// <param name="originalBackupSize">
+    /// Size in bytes of the genuine Valve <c>steam_api64.dll</c> backup, if known.
+    /// When provided and the active DLL is at least 4x bigger or 1 MB larger than the
+    /// backup, the DLL is treated as GoldBerg without needing a string marker
+    /// (gbe_fork builds are typically 10\u201320 MB; Valve's is ~250 KB).
+    /// </param>
+    private static bool LooksLikeGoldberg(string dllPath, long? originalBackupSize)
     {
         try
         {
+            var fi = new FileInfo(dllPath);
+
+            // Size-delta fallback first (covers obfuscated / stripped builds where marker
+            // strings might not be visible in plaintext).
+            if (originalBackupSize is long origSize && origSize > 0)
+            {
+                if (fi.Length >= origSize * 4 || fi.Length - origSize >= 1024L * 1024L)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                // Heuristic: a genuine Valve steam_api64.dll is ~250 KB. Anything > 1 MB is
+                // almost certainly an emulator (or a custom build).
+                if (fi.Length > 1024L * 1024L)
+                {
+                    return true;
+                }
+            }
+
+            // String-marker scan: read up to 4 MB from the start of the file.
             using var fs = File.OpenRead(dllPath);
-            var len = (int)Math.Min(fs.Length, 512 * 1024);
+            var len = (int)Math.Min(fs.Length, 4L * 1024 * 1024);
             var buffer = new byte[len];
-            var read = fs.Read(buffer, 0, len);
-            var text = Encoding.ASCII.GetString(buffer, 0, read);
+            var totalRead = 0;
+            while (totalRead < len)
+            {
+                var n = fs.Read(buffer, totalRead, len - totalRead);
+                if (n <= 0) break;
+                totalRead += n;
+            }
+            var ascii = Encoding.ASCII.GetString(buffer, 0, totalRead);
+            var utf16 = Encoding.Unicode.GetString(buffer, 0, totalRead);
             string[] markers =
             {
                 "Goldberg SteamEmu",
@@ -353,10 +391,15 @@ public sealed class SteamEmu
                 "force_account_name.txt",
                 "GBE_FORK",
                 "gbe_fork",
+                "steam_settings",
+                "force_steam_id.txt",
+                "GoldbergEmu",
+                "ColdClientLoader",
             };
             foreach (var m in markers)
             {
-                if (text.IndexOf(m, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (ascii.IndexOf(m, StringComparison.OrdinalIgnoreCase) >= 0
+                    || utf16.IndexOf(m, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     return true;
                 }
