@@ -1,0 +1,27 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+## Build outputs
+*.dll
+*.pdb
+*.exe
+*.cache
+!**/Zenith*.exe
+
+## Rider
+.idea/
+
+## Logs
+*.log
