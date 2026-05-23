@@ -15,6 +15,13 @@ partial class SettingsDialog
     private Label lblMutexHint;
     private TextBox txtMutexHint;
     private CheckBox chkBypassSteam;
+    private GroupBox grpSteamEmu;
+    private Label lblGoldbergPath;
+    private TextBox txtGoldbergPath;
+    private Button btnBrowseGoldberg;
+    private Label lblGoldbergStatus;
+    private Button btnInstallGoldberg;
+    private Button btnRestoreGoldberg;
     private Button btnOk;
     private Button btnCancel;
 
@@ -39,10 +46,18 @@ partial class SettingsDialog
         lblMutexHint = new Label();
         txtMutexHint = new TextBox();
         chkBypassSteam = new CheckBox();
+        grpSteamEmu = new GroupBox();
+        lblGoldbergPath = new Label();
+        txtGoldbergPath = new TextBox();
+        btnBrowseGoldberg = new Button();
+        lblGoldbergStatus = new Label();
+        btnInstallGoldberg = new Button();
+        btnRestoreGoldberg = new Button();
         btnOk = new Button();
         btnCancel = new Button();
 
         SuspendLayout();
+        grpSteamEmu.SuspendLayout();
 
         lblGamePath.AutoSize = true;
         lblGamePath.Location = new System.Drawing.Point(12, 15);
@@ -76,20 +91,59 @@ partial class SettingsDialog
         txtMutexHint.Location = new System.Drawing.Point(160, 112);
         txtMutexHint.Size = new System.Drawing.Size(405, 23);
 
+        // ---- GoldBerg Steam Emulator group ----
+        grpSteamEmu.Location = new System.Drawing.Point(12, 150);
+        grpSteamEmu.Size = new System.Drawing.Size(553, 165);
+        grpSteamEmu.Text = "Steam Emulator (GoldBerg) — required when Steam ticket auth is needed";
+
+        lblGoldbergPath.AutoSize = true;
+        lblGoldbergPath.Location = new System.Drawing.Point(10, 25);
+        lblGoldbergPath.Text = "GoldBerg steam_api64.dll:";
+
+        txtGoldbergPath.Location = new System.Drawing.Point(160, 22);
+        txtGoldbergPath.Size = new System.Drawing.Size(295, 23);
+
+        btnBrowseGoldberg.Location = new System.Drawing.Point(460, 21);
+        btnBrowseGoldberg.Size = new System.Drawing.Size(80, 25);
+        btnBrowseGoldberg.Text = "Browse...";
+        btnBrowseGoldberg.Click += BtnBrowseGoldberg_Click;
+
+        lblGoldbergStatus.Location = new System.Drawing.Point(10, 55);
+        lblGoldbergStatus.Size = new System.Drawing.Size(530, 40);
+        lblGoldbergStatus.ForeColor = System.Drawing.SystemColors.GrayText;
+        lblGoldbergStatus.Text = "Status: unknown";
+
+        btnInstallGoldberg.Location = new System.Drawing.Point(10, 105);
+        btnInstallGoldberg.Size = new System.Drawing.Size(220, 30);
+        btnInstallGoldberg.Text = "Install GoldBerg into game";
+        btnInstallGoldberg.Click += BtnInstallGoldberg_Click;
+
+        btnRestoreGoldberg.Location = new System.Drawing.Point(240, 105);
+        btnRestoreGoldberg.Size = new System.Drawing.Size(220, 30);
+        btnRestoreGoldberg.Text = "Restore original Steam DLL";
+        btnRestoreGoldberg.Click += BtnRestoreGoldberg_Click;
+
+        grpSteamEmu.Controls.Add(lblGoldbergPath);
+        grpSteamEmu.Controls.Add(txtGoldbergPath);
+        grpSteamEmu.Controls.Add(btnBrowseGoldberg);
+        grpSteamEmu.Controls.Add(lblGoldbergStatus);
+        grpSteamEmu.Controls.Add(btnInstallGoldberg);
+        grpSteamEmu.Controls.Add(btnRestoreGoldberg);
+
         btnOk.DialogResult = DialogResult.OK;
-        btnOk.Location = new System.Drawing.Point(395, 155);
+        btnOk.Location = new System.Drawing.Point(395, 330);
         btnOk.Size = new System.Drawing.Size(85, 28);
         btnOk.Text = "OK";
         btnOk.Click += BtnOk_Click;
 
         btnCancel.DialogResult = DialogResult.Cancel;
-        btnCancel.Location = new System.Drawing.Point(485, 155);
+        btnCancel.Location = new System.Drawing.Point(485, 330);
         btnCancel.Size = new System.Drawing.Size(85, 28);
         btnCancel.Text = "Cancel";
 
         AcceptButton = btnOk;
         CancelButton = btnCancel;
-        ClientSize = new System.Drawing.Size(585, 200);
+        ClientSize = new System.Drawing.Size(585, 375);
         Controls.Add(lblGamePath);
         Controls.Add(txtGamePath);
         Controls.Add(btnBrowse);
@@ -98,6 +152,7 @@ partial class SettingsDialog
         Controls.Add(chkBypassSteam);
         Controls.Add(lblMutexHint);
         Controls.Add(txtMutexHint);
+        Controls.Add(grpSteamEmu);
         Controls.Add(btnOk);
         Controls.Add(btnCancel);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -107,6 +162,8 @@ partial class SettingsDialog
         StartPosition = FormStartPosition.CenterParent;
         Text = "Settings";
 
+        grpSteamEmu.ResumeLayout(false);
+        grpSteamEmu.PerformLayout();
         ResumeLayout(false);
         PerformLayout();
     }

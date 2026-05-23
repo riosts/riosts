@@ -38,6 +38,19 @@ public sealed class AppSettings
     [JsonPropertyName("bypassSteam")]
     public bool BypassSteam { get; set; } = true;
 
+    /// <summary>
+    /// Path to a user-supplied GoldBerg Steam Emulator <c>steam_api64.dll</c>.
+    /// Required only for instances that have <see cref="Instance.UseSteamEmu"/> set,
+    /// because games like Pixel Worlds require a real-looking Steam ticket from the
+    /// Steamworks SDK before the game-world server accepts the client.
+    ///
+    /// GoldBerg is not distributed with this project for licensing reasons — the
+    /// user must download it from the upstream repository and point this setting at
+    /// the resulting DLL.
+    /// </summary>
+    [JsonPropertyName("goldbergDllPath")]
+    public string GoldbergDllPath { get; set; } = string.Empty;
+
     [JsonPropertyName("instances")]
     public List<Instance> Instances { get; set; } = new();
 }

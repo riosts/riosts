@@ -38,9 +38,10 @@ public sealed class InstanceLauncher
 
         var gameDir = Path.GetDirectoryName(_settings.GameExePath)!;
 
-        // 1. Drop steam_appid.txt next to the exe so the Steamworks SDK does not require
-        //    a Steam client to be running. (Official Valve trick documented in Steamworks SDK.)
-        if (_settings.BypassSteam)
+        // 1. Drop steam_appid.txt next to the exe so the Steamworks SDK (real or emulated)
+        //    starts without a Steam client. (Official Valve trick documented in Steamworks SDK,
+        //    also honored by GoldBerg.)
+        if (_settings.BypassSteam || instance.UseSteamEmu)
         {
             try
             {
@@ -52,6 +53,20 @@ public sealed class InstanceLauncher
             {
                 Logger.Warn("Failed to write steam_appid.txt (continuing without Steam bypass)", ex);
             }
+        }
+
+        // 1b. If this instance opted into the Steam emulator, verify GoldBerg is installed
+        //     and write per-instance display name + SteamID before the game starts.
+        if (instance.UseSteamEmu)
+        {
+            var emuStatus = SteamEmu.GetStatus(_settings.GameExePath);
+            if (!emuStatus.Installed)
+            {
+                throw new InvalidOperationException(
+                    "This instance is configured to use the Steam Emulator, but GoldBerg is not installed in the game directory. " +
+                    $"Open Settings, set the GoldBerg DLL path, and click 'Install GoldBerg'. ({emuStatus.Detail})");
+            }
+            SteamEmu.WriteInstanceSettings(_settings.GameExePath, instance);
         }
 
         // 2. Optionally apply per-instance data isolation BEFORE launching.

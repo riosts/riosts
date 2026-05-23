@@ -9,6 +9,7 @@ It is intentionally minimal and **non-invasive**:
 - ✓ A named-mutex bypass that lets multiple copies of `PixelWorlds.exe` run side by side
 - ✓ Per-instance data isolation via filesystem junctions (each instance gets its own `LocalLow\Kukouri\Pixel Worlds` folder)
 - ✓ A `steam_appid.txt` drop so the game can start without the Steam client running (still requires a legally installed copy of the game)
+- ✓ Optional GoldBerg Steam Emulator integration for games whose servers require a real-looking Steam ticket (e.g. Pixel Worlds itself — see [Steam Emulator](#steam-emulator-goldberg) below)
 
 ## How it works
 
@@ -26,6 +27,38 @@ All persistent state lives under `%AppData%\PixelWorldsInjector\`:
 └── instances\
     └── <instance-id>\LocalLow\Kukouri\Pixel Worlds\...
 ```
+
+## Steam Emulator (GoldBerg)
+
+The `steam_appid.txt` trick is enough for many games but **not** for Pixel Worlds: the game's world server rejects clients whose Steamworks SDK returns an empty auth ticket. To run Pixel Worlds without the real Steam client you need a Steam Emulator that produces a fake-but-format-valid ticket. The injector integrates with [GoldBerg Steam Emulator](https://gitlab.com/Mr_Goldberg/goldberg_emulator) (and its forks, e.g. [`gbe_fork`](https://github.com/Detanup01/gbe_fork)).
+
+**GoldBerg is not bundled with this project** for licensing and AV-distribution reasons. The user must download it from upstream and point the launcher at the resulting `steam_api64.dll`.
+
+### One-time setup
+
+1. Download the latest GoldBerg release from upstream and unzip it somewhere persistent (e.g. `C:\Tools\Goldberg\`).
+2. In the injector, open **File → Settings**.
+3. Set **GoldBerg steam_api64.dll** to the unzipped `steam_api64.dll` (the 64-bit one — Pixel Worlds is a 64-bit game).
+4. Click **Install GoldBerg into game**. This will:
+   - Rename the game's existing `steam_api64.dll` to `steam_api64.original.dll` (backup).
+   - Copy the GoldBerg DLL into the game directory.
+5. The status label in Settings should now read `GoldBerg INSTALLED ...`.
+
+### Per-instance Steam identity
+
+In **Edit Instance**, tick **Use Steam Emulator for this instance** and optionally set the **Steam display name** and **SteamID64** (17 digits). Both fields are optional — leave them blank and the launcher will auto-derive a deterministic SteamID from the instance id so each instance keeps a stable identity across launches.
+
+These values have **no link to a real Steam account**; they only control what the emulator reports to the game.
+
+### Restoring the original DLL
+
+If you ever want to go back to launching the game via Steam normally, open **Settings** and click **Restore original Steam DLL**. The backup will be moved back into place.
+
+### Caveats
+
+- Windows Defender and other AV products often flag GoldBerg as a generic threat. It is open source and widely used; you may need to whitelist the DLL.
+- Some online games detect Steam emulators server-side and refuse the connection. The injector cannot work around that. Pixel Worlds historically does not detect GoldBerg, but this can change.
+- Using GoldBerg on a Steam-installed copy of a game does **not** require Steam to be running, but you still need the game to be properly installed via Steam at least once.
 
 ## Building
 
@@ -46,7 +79,7 @@ dotnet publish src/PixelWorldsInjector/PixelWorldsInjector.csproj -c Release -r 
 
 The output `.exe` will be in `src\PixelWorldsInjector\bin\Release\net8.0-windows\win-x64\publish\`.
 
-You can also grab the prebuilt artifact from the latest successful **CI run** (`.github/workflows/build.yml`).
+You can also grab the prebuilt artifact from the latest successful **CI run** (`.github/workflows/pixelworlds-injector-build.yml`).
 
 ## Usage
 
@@ -70,4 +103,4 @@ The maintainers do not endorse or support using this tool for botting, scripting
 
 ## License
 
-MIT (see [LICENSE](LICENSE) once added).
+MIT — see [LICENSE](LICENSE).

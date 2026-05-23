@@ -36,6 +36,29 @@ public sealed class Instance
     [JsonPropertyName("isolateData")]
     public bool IsolateData { get; set; } = true;
 
+    /// <summary>
+    /// When true, the launcher activates the GoldBerg Steam Emulator for this instance
+    /// (the emulator dll must be configured globally in <see cref="AppSettings.GoldbergDllPath"/>
+    /// and installed into the game directory at least once).
+    /// </summary>
+    [JsonPropertyName("useSteamEmu")]
+    public bool UseSteamEmu { get; set; }
+
+    /// <summary>
+    /// Per-instance Steam display name used by the emulator. Optional — defaults to the
+    /// instance name if empty. This has no link to a real Steam account.
+    /// </summary>
+    [JsonPropertyName("steamAccountName")]
+    public string SteamAccountName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Per-instance 17-digit SteamID64 used by the emulator. Optional — when empty a
+    /// deterministic fake ID is derived from <see cref="Id"/> so each instance is stable
+    /// across launches. Has no link to any real Steam account.
+    /// </summary>
+    [JsonPropertyName("steamId")]
+    public string SteamId { get; set; } = string.Empty;
+
     [JsonPropertyName("createdUtc")]
     public DateTimeOffset CreatedUtc { get; set; } = DateTimeOffset.UtcNow;
 

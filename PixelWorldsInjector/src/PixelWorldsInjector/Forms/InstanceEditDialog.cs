@@ -18,6 +18,9 @@ public partial class InstanceEditDialog : Form
         txtAccount.Text = instance.AccountLabel;
         txtExtraArgs.Text = instance.ExtraArgs;
         chkIsolate.Checked = instance.IsolateData;
+        chkUseSteamEmu.Checked = instance.UseSteamEmu;
+        txtSteamName.Text = instance.SteamAccountName;
+        txtSteamId.Text = instance.SteamId;
     }
 
     private void BtnOk_Click(object? sender, EventArgs e)
@@ -30,9 +33,20 @@ public partial class InstanceEditDialog : Form
             return;
         }
 
+        var steamId = txtSteamId.Text.Trim();
+        if (steamId.Length > 0 && (steamId.Length != 17 || !ulong.TryParse(steamId, out _)))
+        {
+            MessageBox.Show(this, "SteamID must be a 17-digit number, or empty to auto-derive one.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            DialogResult = DialogResult.None;
+            return;
+        }
+
         _instance.Name = name;
         _instance.AccountLabel = txtAccount.Text.Trim();
         _instance.ExtraArgs = txtExtraArgs.Text.Trim();
         _instance.IsolateData = chkIsolate.Checked;
+        _instance.UseSteamEmu = chkUseSteamEmu.Checked;
+        _instance.SteamAccountName = txtSteamName.Text.Trim();
+        _instance.SteamId = steamId;
     }
 }
