@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
@@ -23,15 +25,19 @@ namespace PixelWorldsInjector.Services;
 ///   - The original <c>steam_api64.dll</c> shipped with the game is renamed to
 ///     <c>steam_api64.original.dll</c> (only on first install).
 ///   - The user-supplied GoldBerg DLL is copied in as <c>steam_api64.dll</c>.
-///   - <c>Restore</c> reverses the rename.
-/// Per-instance settings (account name, SteamID) are written into the game's
-/// <c>steam_settings/</c> directory right before launching.
+///   - Any companion files in the source folder (e.g. <c>steamclient64.dll</c>) are
+///     copied to the same target directory; existing copies are backed up with the
+///     same <c>.original.dll</c> suffix.
+///   - <c>Restore</c> reverses everything.
+/// Per-instance settings (account name, SteamID) are written into a
+/// <c>steam_settings/</c> directory next to the active DLL just before launch.
 /// </summary>
 [SupportedOSPlatform("windows")]
 public sealed class SteamEmu
 {
     private const string BackupSuffix = ".original.dll";
     private static readonly string[] CandidateDllNames = { "steam_api64.dll", "steam_api.dll" };
+    private static readonly string[] CompanionDllNames = { "steamclient64.dll", "steamclient.dll" };
 
     public sealed record InstallStatus(bool Installed, string? OriginalDllPath, string? ActiveDllPath, string? Detail);
 
@@ -39,8 +45,8 @@ public sealed class SteamEmu
     /// Inspect the game directory and report whether GoldBerg appears to be installed.
     ///
     /// We consider it installed when:
-    ///  1. A <c>steam_api64.original.dll</c> backup is present (proof of an earlier install), AND
-    ///  2. The current <c>steam_api64.dll</c> contains a GoldBerg signature string.
+    ///  1. A <c>*.original.dll</c> backup of the Steam API DLL is present (proof of an earlier install), AND
+    ///  2. The current Steam API DLL contains a GoldBerg signature string.
     /// </summary>
     public static InstallStatus GetStatus(string gameExePath)
     {
@@ -50,24 +56,27 @@ public sealed class SteamEmu
         }
 
         var gameDir = Path.GetDirectoryName(gameExePath)!;
-        var (activeDll, backupDll) = LocateDllPair(gameDir);
-        if (activeDll is null)
+        var pair = LocateDllPair(gameDir);
+        if (pair is null)
         {
             return new InstallStatus(false, null, null, "Could not find steam_api64.dll inside the game directory.");
         }
 
-        var backupExists = backupDll is not null && File.Exists(backupDll);
-        var isGoldberg = LooksLikeGoldberg(activeDll);
+        var backupExists = File.Exists(pair.BackupPath);
+        var activeExists = File.Exists(pair.ActivePath);
+        var isGoldberg = activeExists && LooksLikeGoldberg(pair.ActivePath);
+        var rel = Path.GetRelativePath(gameDir, pair.ActivePath);
         return new InstallStatus(
             Installed: backupExists && isGoldberg,
-            OriginalDllPath: backupDll,
-            ActiveDllPath: activeDll,
-            Detail: $"active={Path.GetFileName(activeDll)} (goldberg={isGoldberg}) backup={(backupExists ? "yes" : "no")}");
+            OriginalDllPath: pair.BackupPath,
+            ActiveDllPath: pair.ActivePath,
+            Detail: $"active='{rel}' (goldberg={isGoldberg}) backup={(backupExists ? "yes" : "no")}");
     }
 
     /// <summary>
-    /// Back up the original Steam API DLL (if not already backed up) and copy the
-    /// user-supplied GoldBerg DLL in its place.
+    /// Back up the original Steam API DLL (if not already backed up), copy the
+    /// user-supplied GoldBerg DLL in its place, and do the same for any companion
+    /// DLLs (e.g. <c>steamclient64.dll</c>) found in the GoldBerg source folder.
     /// </summary>
     /// <returns>The active DLL path after installation.</returns>
     public static string Install(string gameExePath, string goldbergDllPath)
@@ -78,72 +87,122 @@ public sealed class SteamEmu
         }
 
         var gameDir = Path.GetDirectoryName(gameExePath) ?? throw new ArgumentException("Could not derive game directory.", nameof(gameExePath));
-        var (activeDll, backupDll) = LocateDllPair(gameDir);
-        if (activeDll is null || backupDll is null)
-        {
-            throw new FileNotFoundException("Game directory does not contain steam_api64.dll - this might not be a Steam build of the game.", Path.Combine(gameDir, "steam_api64.dll"));
-        }
+        var pair = LocateDllPair(gameDir)
+            ?? throw new FileNotFoundException(
+                "Could not find steam_api64.dll inside the game directory (searched root and all subfolders). " +
+                "This might not be a Steam build of the game, or the game files are incomplete - verify integrity via Steam.",
+                Path.Combine(gameDir, "steam_api64.dll"));
 
-        if (!File.Exists(backupDll))
+        // 1. Main DLL swap.
+        if (!File.Exists(pair.BackupPath))
         {
-            if (LooksLikeGoldberg(activeDll))
+            if (File.Exists(pair.ActivePath) && LooksLikeGoldberg(pair.ActivePath))
             {
                 throw new InvalidOperationException(
-                    $"The current {Path.GetFileName(activeDll)} already looks like GoldBerg but no original backup exists. " +
+                    $"The current {Path.GetFileName(pair.ActivePath)} already looks like GoldBerg but no original backup exists. " +
                     "Reinstall the game via Steam (Properties → Installed Files → Verify integrity) to restore the real Steam API DLL, then try Install again.");
             }
-            File.Move(activeDll, backupDll, overwrite: false);
-            Logger.Info($"Backed up original {Path.GetFileName(activeDll)} to {Path.GetFileName(backupDll)}");
+            if (File.Exists(pair.ActivePath))
+            {
+                File.Move(pair.ActivePath, pair.BackupPath, overwrite: false);
+                Logger.Info($"Backed up original {pair.ActivePath} to {Path.GetFileName(pair.BackupPath)}");
+            }
         }
         else
         {
-            Logger.Info($"Backup {Path.GetFileName(backupDll)} already exists - leaving it untouched.");
+            Logger.Info($"Backup {pair.BackupPath} already exists - leaving it untouched.");
         }
 
-        File.Copy(goldbergDllPath, activeDll, overwrite: true);
-        try
+        CopyFileNormalized(goldbergDllPath, pair.ActivePath);
+        Logger.Info($"Installed GoldBerg DLL into {pair.ActivePath}");
+
+        // 2. Companion DLLs (e.g. steamclient64.dll lives alongside steam_api64.dll in
+        //    the GoldBerg experimental release and is needed for full Steam emulation).
+        var sourceDir = Path.GetDirectoryName(goldbergDllPath)!;
+        var targetDir = Path.GetDirectoryName(pair.ActivePath)!;
+        foreach (var companion in CompanionDllNames)
         {
-            File.SetAttributes(activeDll, FileAttributes.Normal);
+            var src = Path.Combine(sourceDir, companion);
+            if (!File.Exists(src))
+            {
+                continue;
+            }
+
+            var dst = Path.Combine(targetDir, companion);
+            var dstBackup = Path.ChangeExtension(dst, null) + BackupSuffix;
+            if (File.Exists(dst) && !File.Exists(dstBackup) && !LooksLikeGoldberg(dst))
+            {
+                File.Move(dst, dstBackup, overwrite: false);
+                Logger.Info($"Backed up original {dst} to {Path.GetFileName(dstBackup)}");
+            }
+            CopyFileNormalized(src, dst);
+            Logger.Info($"Installed GoldBerg companion {companion} into {dst}");
         }
-        catch
-        {
-            // Best-effort attribute clear; not fatal.
-        }
-        Logger.Info($"Installed GoldBerg {Path.GetFileName(activeDll)} from {goldbergDllPath}");
-        return activeDll;
+
+        return pair.ActivePath;
     }
 
     /// <summary>
-    /// Restore the original Steam API DLL from the <c>*.original.dll</c> backup, if present.
-    /// Throws when no backup is found.
+    /// Restore the original Steam API DLL (and any backed-up companion DLLs) from
+    /// their <c>*.original.dll</c> backups.
     /// </summary>
     public static void Restore(string gameExePath)
     {
         var gameDir = Path.GetDirectoryName(gameExePath) ?? throw new ArgumentException("Could not derive game directory.", nameof(gameExePath));
-        var (activeDll, backupDll) = LocateDllPair(gameDir);
-        if (activeDll is null || backupDll is null || !File.Exists(backupDll))
+        var pair = LocateDllPair(gameDir)
+            ?? throw new FileNotFoundException("Could not locate the Steam API DLL inside the game directory.", Path.Combine(gameDir, "steam_api64.dll"));
+
+        if (!File.Exists(pair.BackupPath))
         {
-            throw new FileNotFoundException("No GoldBerg backup found. The game's steam_api64.dll has not been replaced by this tool.", backupDll ?? "<unknown>");
+            throw new FileNotFoundException("No GoldBerg backup found. The game's steam_api64.dll has not been replaced by this tool.", pair.BackupPath);
         }
 
-        // Replace active with backup.
-        if (File.Exists(activeDll))
+        // Main DLL.
+        if (File.Exists(pair.ActivePath))
         {
-            File.Delete(activeDll);
+            File.Delete(pair.ActivePath);
         }
-        File.Move(backupDll, activeDll);
-        Logger.Info($"Restored {Path.GetFileName(activeDll)} from backup.");
+        File.Move(pair.BackupPath, pair.ActivePath);
+        Logger.Info($"Restored {pair.ActivePath} from backup.");
+
+        // Companion DLLs: if a backup exists, restore it. If only the goldberg copy
+        // exists (no backup because the game shipped without it), delete the goldberg
+        // copy.
+        var targetDir = Path.GetDirectoryName(pair.ActivePath)!;
+        foreach (var companion in CompanionDllNames)
+        {
+            var dst = Path.Combine(targetDir, companion);
+            var dstBackup = Path.ChangeExtension(dst, null) + BackupSuffix;
+            if (File.Exists(dstBackup))
+            {
+                if (File.Exists(dst))
+                {
+                    File.Delete(dst);
+                }
+                File.Move(dstBackup, dst);
+                Logger.Info($"Restored companion {dst} from backup.");
+            }
+            else if (File.Exists(dst) && LooksLikeGoldberg(dst))
+            {
+                File.Delete(dst);
+                Logger.Info($"Removed orphan GoldBerg companion {dst} (no backup to restore).");
+            }
+        }
     }
 
     /// <summary>
-    /// Write the per-instance GoldBerg settings into <c>{gameDir}/steam_settings/</c>.
-    /// These files are read by GoldBerg at process startup, so they must be written
-    /// before each launch.
+    /// Write the per-instance GoldBerg settings into <c>{dllDir}/steam_settings/</c>.
+    /// GoldBerg reads these files at process startup, so they must be written before
+    /// each launch.
     /// </summary>
     public static void WriteInstanceSettings(string gameExePath, Instance instance)
     {
         var gameDir = Path.GetDirectoryName(gameExePath) ?? throw new ArgumentException("Could not derive game directory.", nameof(gameExePath));
-        var settingsDir = Path.Combine(gameDir, "steam_settings");
+        var pair = LocateDllPair(gameDir)
+            ?? throw new InvalidOperationException("Cannot write GoldBerg settings: Steam API DLL not located in game directory.");
+
+        // GoldBerg reads steam_settings/ relative to the DLL, not the exe.
+        var settingsDir = Path.Combine(Path.GetDirectoryName(pair.ActivePath)!, "steam_settings");
         Directory.CreateDirectory(settingsDir);
 
         var accountName = string.IsNullOrWhiteSpace(instance.SteamAccountName) ? instance.Name : instance.SteamAccountName;
@@ -165,27 +224,111 @@ public sealed class SteamEmu
     private static string DeriveSteamId(string instanceId)
     {
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(instanceId));
-        // Take the first 8 bytes as a little-endian ulong, mask to 32 bits (low account id),
-        // and combine with the standard individual / public-universe prefix (76561197960265728).
-        // This produces a "looks normal" SteamID64 that's deterministic per instance.
+        // Take the first 4 bytes as a uint (low account id) and combine with the standard
+        // individual / public-universe prefix (76561197960265728) to produce a "looks normal"
+        // SteamID64 that's deterministic per instance.
         ulong accountId = BitConverter.ToUInt32(hashBytes, 0);
         const ulong SteamIdBase = 76561197960265728UL;
-        var steamId64 = SteamIdBase + accountId;
-        return steamId64.ToString();
+        return (SteamIdBase + accountId).ToString();
     }
 
-    private static (string? activeDll, string? backupDll) LocateDllPair(string gameDir)
+    private sealed record DllPair(string ActivePath, string BackupPath);
+
+    /// <summary>
+    /// Locate the Steam API DLL anywhere under <paramref name="gameDir"/>. Unity games
+    /// commonly place native plugins under <c>&lt;Game&gt;_Data\Plugins\x86_64\</c>, so we
+    /// can't assume the DLL sits next to the .exe.
+    /// </summary>
+    /// <remarks>
+    /// We prefer a current <c>steam_api64.dll</c>. If only a <c>steam_api64.original.dll</c>
+    /// backup exists (because a previous install removed the active file), use its location
+    /// to reconstruct the pair.
+    /// </remarks>
+    private static DllPair? LocateDllPair(string gameDir)
     {
+        if (!Directory.Exists(gameDir))
+        {
+            return null;
+        }
+
+        // Pass 1: current Steam API DLL.
         foreach (var name in CandidateDllNames)
         {
-            var candidate = Path.Combine(gameDir, name);
-            if (File.Exists(candidate) || File.Exists(Path.ChangeExtension(candidate, null) + BackupSuffix))
+            var hit = SafeEnumerate(gameDir, name).FirstOrDefault();
+            if (hit is not null)
             {
-                var backup = Path.ChangeExtension(candidate, null) + BackupSuffix;
-                return (candidate, backup);
+                var backup = Path.ChangeExtension(hit, null) + BackupSuffix;
+                return new DllPair(hit, backup);
             }
         }
-        return (null, null);
+
+        // Pass 2: only a backup exists (DLL was renamed but the GoldBerg copy was deleted
+        // by AV or by the user). Reconstruct the active path next to the backup.
+        foreach (var name in CandidateDllNames)
+        {
+            var backupName = Path.GetFileNameWithoutExtension(name) + BackupSuffix;
+            var hit = SafeEnumerate(gameDir, backupName).FirstOrDefault();
+            if (hit is not null)
+            {
+                var active = Path.Combine(Path.GetDirectoryName(hit)!, name);
+                return new DllPair(active, hit);
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> SafeEnumerate(string dir, string filename)
+    {
+        // Directory.EnumerateFiles with AllDirectories throws on the first unreadable
+        // subdir. Walk manually so we can keep going past permission errors.
+        var stack = new Stack<string>();
+        stack.Push(dir);
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            string[] files;
+            try
+            {
+                files = Directory.GetFiles(current, filename, SearchOption.TopDirectoryOnly);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Could not enumerate '{current}' while looking for {filename}", ex);
+                continue;
+            }
+            foreach (var f in files)
+            {
+                yield return f;
+            }
+
+            string[] subdirs;
+            try
+            {
+                subdirs = Directory.GetDirectories(current);
+            }
+            catch
+            {
+                continue;
+            }
+            foreach (var sd in subdirs)
+            {
+                stack.Push(sd);
+            }
+        }
+    }
+
+    private static void CopyFileNormalized(string source, string destination)
+    {
+        File.Copy(source, destination, overwrite: true);
+        try
+        {
+            File.SetAttributes(destination, FileAttributes.Normal);
+        }
+        catch
+        {
+            // Best-effort attribute clear; not fatal.
+        }
     }
 
     /// <summary>
