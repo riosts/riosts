@@ -1,15 +1,15 @@
-name: build
+name: pixelworlds-injector-build
 
 on:
   push:
     branches: ["**"]
     paths:
       - "PixelWorldsInjector/**"
-      - ".github/workflows/build.yml"
+      - ".github/workflows/pixelworlds-injector-build.yml"
   pull_request:
     paths:
       - "PixelWorldsInjector/**"
-      - ".github/workflows/build.yml"
+      - ".github/workflows/pixelworlds-injector-build.yml"
   workflow_dispatch:
 
 jobs:
